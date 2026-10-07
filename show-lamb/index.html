@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Show Lamb</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect fill='%238E2F2F' width='64' height='64' rx='14'/%3E%3Ccircle cx='30' cy='36' r='16' fill='%23F7F1E6'/%3E%3Ccircle cx='46' cy='30' r='9' fill='%23161616'/%3E%3C/svg%3E">
+<style>
+
+:root {
+  --barn: #8e2f2f; --barn-dark: #6e2222; --wood: #c4a574; --wood-dark: #7a5424;
+  --straw: #e6c56a; --cream: #fbf6ea; --ink: #3a2a1a; --leaf: #3e6b45; --gold: #e0a106;
+  --line: #e4d3b0; --shadow: 0 10px 28px rgba(58, 42, 26, .12);
+  font-family: "Avenir Next", "Trebuchet MS", "Segoe UI", sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; }
+body {
+  color: var(--ink);
+  background: radial-gradient(circle at 12% 8%, rgba(255,255,255,.28), transparent 32%), linear-gradient(180deg, #8fbf62, #5e8d42 70%);
+  min-height: 100vh; min-height: 100dvh;
+}
+button, input { font-family: inherit; color: inherit; }
+button { cursor: pointer; }
+#app {
+  width: min(1180px, 100%); margin: 0 auto; height: 100vh; height: 100dvh;
+  background: var(--cream); position: relative; display: flex; flex-direction: column; overflow: hidden;
+  box-shadow: 0 0 0 4px #6b3a22, 0 18px 50px rgba(0,0,0,.22);
+}
+.screen { display: none; flex: 1; min-height: 0; flex-direction: column; position: relative; }
+.screen.active { display: flex; }
+.screen.overlay.active { position: absolute; inset: 0; z-index: 5; background: var(--cream); }
+.hidden { display: none !important; }
+#hud { padding: 10px 108px 8px 12px; background: linear-gradient(#fffaf0, #f4e7cb); border-bottom: 3px solid var(--wood); flex: none; }
+.hud-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.day-btn, .weight-box, .pts-box {
+  background: #fffaf0; border: 2px solid var(--wood-dark); border-radius: 12px; padding: 4px 10px; text-align: left; box-shadow: 0 2px 0 #c4a574;
+}
+.day-btn strong, .weight-box strong, .pts-box strong { display: block; font-size: 16px; line-height: 1.15; }
+.day-btn small, .weight-box small, .pts-box small, #clock small { color: #6d5436; font-size: 12px; }
+.weight-box, .pts-box { text-align: center; min-width: 72px; }
+#clock { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.clock-face { width: 42px; height: 42px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fff, #f3e2b8); border: 2px solid var(--wood-dark); position: relative; }
+.clock-face:before { content: ""; position: absolute; width: 4px; height: 4px; border-radius: 50%; background: var(--ink); left: 50%; top: 50%; margin: -2px 0 0 -2px; }
+.hand { position: absolute; left: 50%; top: 50%; width: 3px; height: 14px; margin-left: -1.5px; margin-top: -14px; background: var(--barn); transform-origin: bottom center; transform: rotate(210deg); border-radius: 2px; transition: transform .6s ease; }
+#clock.evening .hand { transform: rotate(195deg); }
+.season { margin-top: 8px; }
+.season-track { height: 10px; background: #e7d7b4; border-radius: 99px; overflow: hidden; border: 1px solid #d9c396; }
+#season-fill { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--gold), var(--barn)); transition: width .45s ease; }
+.meters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; }
+.meters label { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #6d5436; display: block; }
+.meters label span { float: right; font-weight: 800; color: var(--ink); letter-spacing: 0; text-transform: none; }
+.meters i { display: block; clear: both; height: 8px; margin-top: 3px; background: #eadcbf; border-radius: 99px; overflow: hidden; }
+.meters b { display: block; height: 100%; width: 0; border-radius: 99px; transition: width .45s ease; }
+#hunger-bar { background: linear-gradient(90deg, #e0a106, #f0c14a); }
+#clean-bar { background: linear-gradient(90deg, #6aa8c8, #b7d7ea); }
+#show-bar { background: linear-gradient(90deg, #6b3d86, #b47ad4); }
+#mood-bar { background: linear-gradient(90deg, #3e6b45, #8fbf62); }
+#fabs { position: absolute; top: 8px; right: 8px; z-index: 12; display: flex; gap: 6px; }
+.fab { min-width: 44px; min-height: 44px; padding: 0 10px; border-radius: 999px; border: 2px solid var(--wood-dark); background: #fffaf0; font-weight: 800; box-shadow: 0 2px 0 #c4a574; }
+.fab[aria-pressed="true"] { background: #efe2c6; color: #6d5436; }
+.btn { min-height: 48px; padding: 10px 14px; border-radius: 14px; border: 2px solid #6b4423; background: linear-gradient(#fff6d8, #f0d48a); font-weight: 800; font-size: 16px; box-shadow: 0 3px 0 #8a6230; touch-action: manipulation; }
+.btn:active { transform: translateY(2px); box-shadow: none; }
+.btn.primary { background: linear-gradient(#c45454, #8e2f2f); color: #fffaf0; border-color: #5c1c1c; box-shadow: 0 3px 0 #5c1c1c; }
+.btn.ghost { background: #fffaf0; }
+.btn.pulse { animation: pulse 1.5s ease-in-out infinite; }
+@keyframes pulse { 50% { transform: translateY(-1px); box-shadow: 0 6px 0 #5c1c1c; } }
+#screen-setup { background: radial-gradient(circle at 50% -10%, #ffe7a8, transparent 46%), linear-gradient(#fbf6ea, #f3e2c0); align-items: center; overflow: auto; padding: 28px 16px 40px; }
+.setup-card { width: min(560px, 100%); background: #fffaf0; border: 4px solid var(--barn); border-radius: 24px; padding: 16px 16px 20px; box-shadow: var(--shadow); }
+.title-row { display: flex; gap: 8px; align-items: center; }
+#setup-mascot { width: 150px; flex: none; }
+.eyebrow { margin: 0; letter-spacing: .14em; text-transform: uppercase; font-size: 12px; color: var(--barn); font-weight: 800; }
+h1 { font-family: Georgia, "Palatino Linotype", Palatino, serif; font-size: 46px; margin: 0; letter-spacing: -0.03em; line-height: .95; }
+.lede, .fine { color: #5c4630; }
+.lede { margin: 8px 0 0; }
+label.field { display: block; font-weight: 800; margin-top: 12px; }
+label.field input { display: block; width: 100%; margin-top: 4px; min-height: 48px; border-radius: 12px; border: 2px solid var(--wood-dark); background: #fff; padding: 8px 12px; font-size: 18px; }
+.form-error { color: var(--barn); min-height: 1.2em; font-weight: 700; margin: 6px 0; }
+.continue-box { background: #f6ead0; border-radius: 14px; padding: 10px; margin: 10px 0; }
+.fine { font-size: 13px; }
+.trophies { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.trophy-pill { background: #fff; border: 2px solid var(--line); border-radius: 999px; padding: 4px 8px; font-size: 13px; }
+.sky { height: 84px; position: relative; overflow: hidden; flex: none; }
+.sky.morning { background: linear-gradient(#7ec8e3, #f6e2b8 78%); }
+.sky.evening { background: linear-gradient(#2e3d66, #e39a6a 62%, #c46b3a); }
+.sun, .moon { position: absolute; border-radius: 50%; transition: .8s ease; }
+.sun { width: 42px; height: 42px; background: #ffe56a; box-shadow: 0 0 24px #ffd35c; top: 14px; right: 16%; }
+.sky.evening .sun { top: 46px; right: 6%; background: #ff9a4a; }
+.moon { width: 26px; height: 26px; background: #f4f0d8; box-shadow: -6px 2px 0 #c9c6b0 inset; top: 14px; left: 14%; opacity: 0; }
+.sky.evening .moon { opacity: 1; }
+.cloud { position: absolute; background: #fff; border-radius: 20px; opacity: .9; animation: drift 42s linear infinite; }
+.cloud:before, .cloud:after { content: ""; position: absolute; background: inherit; border-radius: 50%; }
+.c1 { width: 54px; height: 16px; top: 18px; left: -60px; }
+.c1:before { width: 20px; height: 20px; top: -12px; left: 8px; }
+.c1:after { width: 26px; height: 22px; top: -14px; left: 22px; }
+.c2 { width: 70px; height: 16px; top: 40px; left: -90px; animation-duration: 58s; animation-delay: -20s; }
+.c2:before { width: 24px; height: 24px; top: -14px; left: 14px; }
+.sky.evening .cloud { opacity: .28; background: #f0c2a0; }
+@keyframes drift { to { transform: translateX(140vw); } }
+.hills { position: absolute; left: 0; right: 0; bottom: -1px; height: 28px; background: radial-gradient(circle at 20% 120%, #6a9a4e 0 38%, transparent 39%), radial-gradient(circle at 70% 140%, #5c8c44 0 42%, transparent 43%); }
+.barn-row { display: flex; flex-direction: column; gap: 8px; padding: 0 10px; flex: 1; min-height: 0; }
+.barn { flex: 1; min-height: 240px; display: flex; flex-direction: column; background: linear-gradient(#f4e6c8, #e7d3a4); border: 4px solid #6e3b22; border-radius: 8px 8px 16px 16px; position: relative; overflow: hidden; }
+.roof { position: relative; height: 64px; flex: none; }
+.roof:before { content: ""; position: absolute; inset: 0 0 -2px 0; background: linear-gradient(#c24a4a, #7d2424); clip-path: polygon(0% 100%, 7% 42%, 50% 0, 93% 42%, 100% 100%); }
+.roof span { position: relative; z-index: 1; display: block; text-align: center; padding-top: 26px; color: #fff8e8; font-weight: 800; letter-spacing: .12em; font-size: 13px; }
+.stalls { display: flex; gap: 6px; padding: 0 8px 8px; flex: 1; min-height: 0; }
+.stall { flex: 1; min-width: 0; position: relative; overflow: hidden; display: flex; flex-direction: column; background: linear-gradient(180deg, rgba(255,255,255,.18), transparent 28%), repeating-linear-gradient(90deg, #d7b172 0 12px, #c79a55 12px 14px); border: 3px solid #6b4423; border-radius: 10px; perspective: 700px; }
+.plaque { margin: 6px 6px 0; background: #fff8e6; border: 2px solid #8a6234; border-radius: 8px; text-align: center; padding: 3px 4px; position: relative; z-index: 4; }
+.plaque b { display: block; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.plaque small { color: #6d5436; font-size: 11px; }
+.stall-stage { flex: 1; display: flex; align-items: flex-end; justify-content: center; min-height: 0; position: relative; z-index: 1; }
+.straw { position: absolute; left: 0; right: 0; bottom: 0; height: 36px; z-index: 6; pointer-events: none; background: repeating-linear-gradient(90deg, #e6c35a 0 6px, #f3d98a 6px 11px, #d7ae45 11px 14px); border-top: 3px solid #c4923a; }
+.empty-note { position: relative; z-index: 3; text-align: center; color: #6d5436; padding: 8px; font-weight: 700; }
+.bucket { width: 54px; height: 36px; margin: 8px auto 48px; background: linear-gradient(#c45555, #8e2f2f); border-radius: 4px 4px 12px 12px; border: 2px solid #5c1c1c; position: relative; z-index: 3; }
+.bucket:before { content: ""; position: absolute; left: 8px; right: 8px; top: -12px; height: 14px; border: 3px solid #d7c09a; border-bottom: none; border-radius: 12px 12px 0 0; }
+.gate-wrap { position: absolute; inset: auto 0 28px 0; height: 46%; z-index: 5; pointer-events: none; }
+#gate { pointer-events: auto; position: absolute; left: 0; bottom: 0; width: 58%; height: 100%; transform-origin: left center; transition: transform .45s ease; background: repeating-linear-gradient(90deg, transparent 0 16px, rgba(74,46,20,.78) 16px 20px); border: 3px solid #4a2e14; border-radius: 4px 12px 12px 4px; }
+.stall.latched #gate { transform: perspective(500px) rotateY(0deg); }
+.stall:not(.latched) #gate { transform: perspective(500px) rotateY(-72deg); }
+.latch-knob { position: absolute; right: 6px; top: 46%; width: 14px; height: 14px; border-radius: 50%; background: var(--gold); border: 2px solid #6b4a10; }
+#gate-label { position: absolute; right: 6px; top: -18px; background: #fffaf0; border-radius: 999px; border: 2px solid #6b4423; font-size: 11px; font-weight: 800; padding: 1px 6px; }
+#player-lamb, #neighbor-lamb { width: 100%; height: 100%; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 28px; position: relative; z-index: 4; }
+#player-lamb .lamb { transform: scale(var(--grow, .62)); transform-origin: 50% 100%; }
+#neighbor-lamb .lamb { transform: scale(.9); transform-origin: 50% 100%; }
+.stall-stage { z-index: 4; }
+#flavor { margin: 4px 12px 0; min-height: 2.6em; font-size: 15.5px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 10px 12px; }
+.actions .btn { flex: 1 1 150px; }
+#checklist { background: #fffaf0; border: 3px solid var(--wood); border-radius: 14px; padding: 10px 10px 12px; overflow: auto; }
+#checklist h2 { margin: 0 0 4px; font-size: 16px; font-family: Georgia, serif; }
+.check-sub { margin: 0 0 8px; color: #6d5436; font-size: 12px; }
+.check-item { width: 100%; text-align: left; margin-top: 6px; border-radius: 10px; border: 2px solid var(--line); background: #fff; padding: 8px 10px; display: flex; justify-content: space-between; gap: 8px; align-items: center; font-weight: 700; min-height: 44px; }
+.check-item.ready { border-color: var(--gold); background: #fff8e2; }
+.check-item.done { background: #eef6ea; border-color: #b7d0b4; color: #2d5534; }
+.check-item.missed { background: #fbeeee; border-color: #e2b4b4; }
+.check-item small { font-weight: 800; color: #6d5436; }
+
+.lamb-svg { width: min(230px, 100%); height: auto; display: block; overflow: visible; }
+.wool { fill: #f7f1e6; stroke: #e4d8c6; stroke-width: 1.2; }
+.lamb.biscuit .wool { fill: #f3ddb0; stroke: #e4c98a; }
+.face { fill: #161616; }
+.muzzle { fill: #0e0e0e; }
+.leg-shape { fill: #141414; }
+.hoof { fill: #070707; }
+.ear-outer { fill: #1a1a1a; }
+.ear-inner { fill: #e7b2b2; }
+.eye-white { fill: #f6f1e4; }
+.pupil { fill: #1a120c; }
+.dirt { opacity: var(--dirt, 0); }
+.dirt ellipse { fill: #7a542c; }
+.halter { fill: none; stroke: #b43333; stroke-width: 3; stroke-linecap: round; }
+.lamb.biscuit .halter { stroke: #2f7d4a; }
+.ground-shadow { fill: rgba(58,42,26,.18); }
+.breathe { transform-origin: 140px 170px; animation: breathe 3.1s ease-in-out infinite; }
+.lamb.n2 .breathe { animation-duration: 3.6s; }
+.eye-group { transform-box: fill-box; transform-origin: center; animation: blink 5.2s infinite; }
+.lamb.n2 .eye-group { animation-delay: -2.2s; }
+.lamb.sleepy .eye-group { animation: none; transform: scaleY(.18); }
+.lamb.hungry .smile { display: none; }
+.lamb:not(.hungry) .frown { display: none; }
+.zzz { opacity: 0; font-family: Georgia, serif; fill: #3a2a1a; font-size: 16px; font-weight: 700; }
+.lamb.sleepy .zzz { opacity: 1; animation: zzz 2s ease-in-out infinite; }
+.bell { transform-origin: 236px 108px; animation: bell 1.8s ease-in-out infinite; }
+.tail { transform-origin: 70px 120px; animation: bell 2.2s ease-in-out infinite; }
+.lamb.happy .bob { animation: boing .85s ease; }
+.lamb.eating .head { transform-box: fill-box; transform-origin: 40% 80%; animation: chew .28s ease-in-out 7; }
+.lamb.walking .leg-shape { transform-box: fill-box; transform-origin: center top; animation: step .32s ease-in-out infinite; }
+.lamb.walking .leg-shape:nth-of-type(2n) { animation-direction: reverse; }
+.lamb.fluffy .wool { filter: brightness(1.06); }
+.lamb.filthy .wool { filter: sepia(.42) brightness(.9); }
+@keyframes breathe { 50% { transform: scale(1.03, .975); } }
+@keyframes blink { 0%, 86%, 100% { transform: scaleY(1); } 91%, 95% { transform: scaleY(.08); } }
+@keyframes boing { 0% { transform: translateY(0); } 30% { transform: translateY(-16px); } 50% { transform: translateY(0); } 70% { transform: translateY(-7px); } 100% { transform: translateY(0); } }
+@keyframes chew { 50% { transform: rotate(7deg) translateY(2px); } }
+@keyframes step { 50% { transform: rotate(16deg); } }
+@keyframes bell { 50% { transform: rotate(14deg); } }
+@keyframes zzz { 50% { transform: translateY(-6px); opacity: .35; } }
+.subhead { display: flex; align-items: center; gap: 8px; padding: 12px 108px 8px 12px; background: linear-gradient(#fffaf0, #f6ead2); border-bottom: 3px solid var(--wood); }
+.subhead h2 { margin: 0; font-family: Georgia, serif; font-size: 22px; flex: 1; }
+.hint { margin: 8px 14px; color: #5c4630; }
+.task-meter { height: 12px; margin: 0 14px; background: #eadcbf; border-radius: 99px; overflow: hidden; border: 1px solid #d9c396; }
+.task-meter b { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--leaf), #8fbf62); transition: width .2s; }
+.feed-stage, #wash-stage { flex: 1; min-height: 220px; position: relative; margin: 8px 12px; border-radius: 16px; background: linear-gradient(#f4e6c8, #e7d3a4); border: 3px solid #6b4423; overflow: hidden; touch-action: none; user-select: none; }
+.feed-stage { display: flex; align-items: flex-end; justify-content: space-around; padding: 10px; }
+#feed-lamb { width: min(280px, 46%); align-self: flex-end; }
+#wash-lamb { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); transform-origin: bottom center; width: min(460px, 78%); }
+.trough { width: min(220px, 32%); height: 74px; align-self: flex-end; margin-bottom: 18px; background: linear-gradient(#8a5a32, #5c3a1e); border-radius: 8px 8px 16px 16px; border: 3px solid #3d2614; position: relative; overflow: hidden; }
+.trough span { position: absolute; top: 6px; left: 0; right: 0; text-align: center; color: #f8e7c4; font-size: 12px; font-weight: 800; letter-spacing: .08em; }
+#grain-pile { position: absolute; left: 10%; right: 10%; bottom: 8px; height: 0; background: repeating-linear-gradient(90deg, #e0b84a, #f0d078 4px, #c9962a 6px); border-radius: 8px; transition: height .25s; }
+.sack { width: 110px; height: 130px; align-self: flex-end; margin-bottom: 12px; background: radial-gradient(circle at 30% 20%, #f0d59a, #c4923a 70%); border: 3px solid #6b4423; border-radius: 16px 16px 20px 20px; position: relative; display: flex; align-items: flex-start; justify-content: center; }
+.sack:before { content: "GRAIN"; position: absolute; bottom: 18px; font-weight: 900; letter-spacing: .08em; color: #5c3a1e; }
+.scoop { width: 74px; height: 36px; border-radius: 0 18px 18px 18px; margin-top: 8px; background: linear-gradient(#fff, #d7d2c8); border: 2px solid #6d5436; font-weight: 800; font-size: 13px; touch-action: none; position: relative; z-index: 2; }
+.scoop.dragging { position: absolute; z-index: 5; margin: 0; }
+.kernel { position: absolute; width: 7px; height: 9px; background: #e0b84a; border-radius: 40%; animation: drop .45s ease-in forwards; }
+@keyframes drop { to { transform: translateY(68px); opacity: .2; } }
+.sud { position: absolute; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #fff, #d5eef8 70%, rgba(255,255,255,0)); animation: pop .7s ease-out forwards; pointer-events: none; }
+@keyframes pop { to { transform: translateY(-18px) scale(1.4); opacity: 0; } }
+#dryer { position: absolute; width: 78px; height: 40px; margin: -36px 0 0 -8px; display: none; pointer-events: none; z-index: 3; }
+#wash-stage.phase-dry #dryer, #wash-stage.phase-done #dryer { display: block; }
+.dryer-body { width: 46px; height: 34px; background: linear-gradient(#6aa8c8, #3d7594); border-radius: 10px; border: 2px solid #21485c; position: absolute; right: 0; top: 4px; }
+.dryer-nozzle { width: 28px; height: 16px; background: #d9d3c7; border: 2px solid #6d5436; position: absolute; left: 0; top: 14px; border-radius: 4px 0 0 4px; }
+.dryer-nozzle:after { content: ""; position: absolute; left: -16px; top: -6px; border-right: 16px solid rgba(255,255,255,.75); border-top: 8px solid transparent; border-bottom: 8px solid transparent; }
+#wrap-legs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 12px; flex: 1; align-items: center; }
+.leg-target { background: #f4e6c8; border: 3px solid #6b4423; border-radius: 16px; min-height: 220px; padding: 8px; text-align: center; touch-action: none; user-select: none; position: relative; }
+.leg-target strong { display: block; font-size: 13px; }
+.limb { width: 42px; height: 130px; margin: 16px auto 0; background: #1a1a1a; border-radius: 18px; position: relative; }
+.leg-target:before { content: ""; position: absolute; left: 50%; top: 58px; width: 78px; height: 150px; transform: translateX(-50%); border: 2px dashed rgba(90,58,30,.45); border-radius: 40px; pointer-events: none; }
+.bandage { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: repeating-linear-gradient(#f7f4ee, #f7f4ee 6px, #d9d3c7 6px, #d9d3c7 9px); }
+.leg-target.done { background: #eef6ea; }
+#arena-field, #chase-field { flex: 1; min-height: 220px; position: relative; margin: 8px; border-radius: 16px; overflow: hidden; touch-action: none; user-select: none; }
+#arena-field { background: repeating-linear-gradient(90deg, #c4923a 0 12px, #d7ae55 12px 18px); border: 4px solid #6b4423; }
+#chalk { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); border: 4px dashed rgba(255,250,240,.92); border-radius: 50%; pointer-events: none; }
+.lead-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+#lead-line { stroke: #5c3a1e; stroke-width: 3; stroke-linecap: round; }
+.handler { width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; background: #f0c7a0; border: 3px solid var(--barn); }
+.actor { position: absolute; left: 0; top: 0; pointer-events: none; }
+#arena-lamb .lamb-svg { width: 112px; }
+#chase-lamb .lamb-svg { width: 104px; }
+.judge { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); text-align: center; font-weight: 800; font-size: 12px; color: #fff8e8; }
+.judge .hat { width: 44px; height: 10px; background: #2a241c; border-radius: 3px; margin: 0 auto; position: relative; }
+.judge .hat:before { content: ""; position: absolute; left: 10px; top: -12px; width: 24px; height: 12px; background: #2a241c; border-radius: 4px 4px 0 0; }
+.judge .head { width: 22px; height: 22px; background: #f0c7a0; border-radius: 50%; margin: 2px auto 0; }
+.judge .coat { width: 36px; height: 26px; background: #2c3d55; margin: 2px auto 0; border-radius: 6px; }
+#chase-field { background: radial-gradient(circle at 80% 10%, rgba(255,244,200,.25), transparent 28%), linear-gradient(#1c3148, #24523a 55%, #3e6b32); border: 4px solid #d7c09a; box-shadow: inset 0 0 0 8px rgba(90,58,30,.35); }
+.bale { position: absolute; width: 54px; height: 36px; margin: -18px 0 0 -27px; border-radius: 6px; background: repeating-linear-gradient(#e6c35a, #e6c35a 6px, #c9962a 6px, #c9962a 8px); border: 2px solid #6b4423; pointer-events: none; }
+.kid { width: 48px; height: 74px; margin: -70px 0 0 -24px; }
+.kid .hat { width: 34px; height: 10px; background: var(--barn); margin: 0 auto; border-radius: 3px; position: relative; }
+.kid .hat:before { content: ""; position: absolute; left: 7px; top: -12px; width: 20px; height: 12px; background: var(--barn); border-radius: 4px 4px 0 0; }
+.kid .face { width: 20px; height: 20px; background: #f0c7a0; border-radius: 50%; margin: 0 auto; }
+.kid .torso { width: 28px; height: 22px; background: #f4f0e6; border: 2px solid var(--barn); margin: 1px auto 0; border-radius: 6px; }
+.kid .legs { width: 22px; height: 16px; margin: 0 auto; background: linear-gradient(#3d5c86, #3d5c86) left/8px 16px no-repeat, linear-gradient(#3d5c86, #3d5c86) right/8px 16px no-repeat; }
+.puff { position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: rgba(232,214,176,.75); animation: puff .5s ease-out forwards; pointer-events: none; }
+@keyframes puff { to { transform: translateY(-16px) scale(1.8); opacity: 0; } }
+.chase-hud, .arena-hud { display: flex; justify-content: space-between; gap: 8px; padding: 0 12px; align-items: center; font-weight: 800; }
+#chase-timer, #arena-timer { font-variant-numeric: tabular-nums; font-size: 22px; background: #fffaf0; border-radius: 10px; padding: 2px 8px; border: 2px solid var(--wood-dark); }
+#chase-timer.low { color: var(--barn); border-color: var(--barn); }
+#joystick { position: absolute; left: 16px; bottom: 16px; width: 118px; height: 118px; z-index: 6; border-radius: 50%; background: rgba(255,250,240,.28); border: 3px solid rgba(255,250,240,.75); touch-action: none; }
+#joy-knob { width: 52px; height: 52px; border-radius: 50%; background: #fffaf0; border: 3px solid var(--wood-dark); position: absolute; left: 50%; top: 50%; margin: -26px 0 0 -26px; }
+#chase-result { position: absolute; left: 16px; right: 16px; bottom: 16px; z-index: 6; background: #fffaf0; border: 3px solid var(--wood-dark); border-radius: 16px; padding: 14px; box-shadow: var(--shadow); color: var(--ink); }
+.heart { position: absolute; width: 10px; height: 10px; background: #d64545; transform: rotate(45deg); animation: floatup .9s ease-out forwards; pointer-events: none; }
+.heart:before, .heart:after { content: ""; position: absolute; width: 10px; height: 10px; background: #d64545; border-radius: 50%; }
+.heart:before { left: -5px; } .heart:after { top: -5px; }
+@keyframes floatup { to { transform: translateY(-40px) rotate(45deg); opacity: 0; } }
+#screen-results { overflow: auto; background: linear-gradient(#1d3550, #8e2f2f 72%); color: #fff8ea; align-items: center; padding: 18px 12px 28px; }
+.results-card { width: min(640px, 100%); text-align: center; }
+.results-card h2 { font-family: Georgia, serif; font-size: 32px; margin: 8px 0; }
+.ribbon { width: 180px; margin: 0 auto; animation: ribbonIn .7s cubic-bezier(.2,1.4,.4,1); }
+.rosette { width: 150px; height: 150px; margin: 0 auto; border-radius: 50%; display: flex; align-items: center; justify-content: center; text-align: center; background: #eee; border: 8px solid #d9d3c7; color: #3a2a1a; font-weight: 900; padding: 12px; }
+.ribbon.grand .rosette { background: radial-gradient(circle at 40% 35%, #fff6c8, #e0a106 42%, #8e2f2f 43% 58%, #5b2a86 59%); color: #fff8ea; border-color: #e0a106; }
+.ribbon.reserve .rosette { background: radial-gradient(circle at 40% 35%, #f3e6ff, #c9a6e8 40%, #5b2a86); color: #fff; border-color: #5b2a86; }
+.ribbon.blue .rosette { background: radial-gradient(circle at 40% 35%, #e7f1ff, #8eb6ef 40%, #2a6fdb); color: #fff; border-color: #2a6fdb; }
+.ribbon.red .rosette { background: radial-gradient(circle at 40% 35%, #ffdede, #ef8e8e 40%, #c43333); color: #fff; border-color: #8e2f2f; }
+.ribbon.white .rosette { background: radial-gradient(circle at 40% 35%, #fff, #f4f1ea); }
+.tails { width: 70px; height: 64px; margin: -6px auto 0; background: linear-gradient(90deg, transparent 0 30%, #d9d3c7 30% 45%, transparent 45% 55%, #d9d3c7 55% 70%, transparent 70%); }
+.ribbon.grand .tails { background: linear-gradient(90deg, transparent 0 30%, #5b2a86 30% 45%, transparent 45% 55%, #e0a106 55% 70%, transparent 70%); }
+.ribbon.reserve .tails { background: linear-gradient(90deg, transparent 0 30%, #5b2a86 30% 45%, transparent 45% 55%, #5b2a86 55% 70%, transparent 70%); }
+.ribbon.blue .tails { background: linear-gradient(90deg, transparent 0 30%, #2a6fdb 30% 45%, transparent 45% 55%, #2a6fdb 55% 70%, transparent 70%); }
+.ribbon.red .tails { background: linear-gradient(90deg, transparent 0 30%, #c43333 30% 45%, transparent 45% 55%, #c43333 55% 70%, transparent 70%); }
+@keyframes ribbonIn { from { transform: translateY(-30px) scale(.7); opacity: 0; } }
+#big-score { font-size: 40px; margin: 4px 0; }
+.bars { text-align: left; background: rgba(255,250,240,.12); border-radius: 14px; padding: 10px; }
+.bar-row { display: grid; grid-template-columns: 110px 1fr 36px; gap: 6px; align-items: center; margin: 5px 0; font-size: 13px; font-weight: 700; }
+.bar-row i { display: block; height: 8px; background: rgba(255,255,255,.25); border-radius: 99px; overflow: hidden; }
+.bar-row b { display: block; height: 100%; width: 0; background: #ffe08a; }
+.quote { font-size: 15px; line-height: 1.45; }
+.results-card .btn { margin: 6px 4px 0; }
+#show-lamb { width: 180px; margin: 0 auto; }
+.modal-back { position: absolute; inset: 0; z-index: 20; background: rgba(40,24,12,.46); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.modal-card, .dev-card { width: min(440px, 100%); background: #fffaf0; color: var(--ink); border: 3px solid var(--wood-dark); border-radius: 16px; padding: 14px; box-shadow: var(--shadow); }
+.modal-card h3, .dev-card h3 { margin: 0 0 6px; font-family: Georgia, serif; }
+#modal-actions, .dev-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+#modal-actions .btn, .dev-actions .btn { flex: 1 1 120px; }
+.dev-card input { width: 100%; min-height: 44px; font-size: 18px; border-radius: 10px; border: 2px solid var(--wood-dark); padding: 6px 10px; margin-top: 6px; }
+#tutorial { position: absolute; left: 10px; right: 10px; top: 132px; z-index: 14; pointer-events: none; }
+@media (max-height: 860px) {
+  .sky { height: 58px; }
+  .roof { height: 50px; }
+  .roof span { padding-top: 18px; }
+  #hud { padding-top: 6px; padding-bottom: 4px; }
+  .meters { margin-top: 4px; }
+  .season { margin-top: 4px; }
+}
+@media (max-width: 720px) { #tutorial { top: 188px; } }
+.tut-card { pointer-events: auto; background: #fffaf0; border: 3px solid var(--gold); border-radius: 16px; padding: 12px; box-shadow: var(--shadow); max-width: 560px; margin: 0 auto; }
+.tut-row { display: flex; gap: 8px; justify-content: flex-end; }
+.spotlight { outline: 3px solid var(--gold); outline-offset: 3px; border-radius: 12px; }
+#toast { position: absolute; left: 50%; top: 72px; transform: translateX(-50%) translateY(-8px); background: #3a2a1a; color: #fff8ea; padding: 10px 14px; border-radius: 999px; opacity: 0; pointer-events: none; transition: .3s; z-index: 25; max-width: min(92%, 540px); text-align: center; font-weight: 700; }
+#toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+#night-veil { pointer-events: none; position: absolute; inset: 0; background: #0e1520; opacity: 0; transition: opacity .45s; z-index: 18; }
+#night-veil.on { opacity: 1; }
+#confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 16; }
+.bit { position: absolute; top: -12px; width: 8px; height: 14px; left: var(--x); animation: fall 2.8s linear forwards; animation-delay: var(--d); }
+@keyframes fall { to { transform: translateY(105vh) rotate(var(--r)); } }
+@media (max-width: 720px) {
+  h1 { font-size: 36px; }
+  .meters { grid-template-columns: 1fr 1fr; }
+  .title-row { flex-direction: column; text-align: center; }
+  #wrap-legs { grid-template-columns: 1fr 1fr; }
+  #clock { margin-left: 0; }
+}
+@media (max-width: 899px) {
+  #checklist { display: none; position: absolute; z-index: 13; left: 8px; right: 8px; bottom: 8px; max-height: 68%; box-shadow: 0 12px 40px rgba(0,0,0,.25); }
+  #checklist.open { display: block; }
+}
+@media (min-width: 900px) {
+  .barn-row { flex-direction: row; align-items: stretch; }
+  #checklist { width: 300px; flex: none; }
+  [data-act="chores"] { display: none !important; }
+  .sky { height: 96px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .breathe, .eye-group, .cloud, .bell, .tail, .zzz { animation: none !important; }
+  .bit { display: none; }
+}
+
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header id="hud" hidden>
+    <div class="hud-row">
+      <button type="button" id="day-btn" class="day-btn" title="Long-press to skip days">
+        <strong id="day-label">Day 1 of 300</strong>
+        <small id="date-label">Week 1 · Monday</small>
+      </button>
+      <div class="weight-box"><strong id="weight-label">20.0</strong><small>pounds</small></div>
+      <div class="pts-box"><strong id="club-label">0</strong><small>club pts</small></div>
+      <div id="clock"><div class="clock-face" aria-hidden="true"><span class="hand"></span></div><small id="clock-label">Morning · 7:00</small></div>
+    </div>
+    <div class="season"><div class="season-track"><div id="season-fill"></div></div></div>
+    <div class="meters">
+      <label>Hunger <span id="hunger-num">50</span><i><b id="hunger-bar"></b></i></label>
+      <label>Coat <span id="clean-num">90</span><i><b id="clean-bar"></b></i></label>
+      <label>Show <span id="show-num">50</span><i><b id="show-bar"></b></i></label>
+      <label>Mood <span id="mood-num">Okay</span><i><b id="mood-bar"></b></i></label>
+    </div>
+  </header>
+  <section class="screen active" id="screen-setup" data-screen="setup">
+    <div class="setup-card">
+      <div class="title-row">
+        <div id="setup-mascot"></div>
+        <div>
+          <p class="eyebrow">4-H livestock season</p>
+          <h1>Show Lamb</h1>
+          <p class="lede">Raise a baby lamb from 20.0 pounds through 300 days of feeding, fitting, and walking, then step into the county fair ring.</p>
+        </div>
+      </div>
+      <div id="continue-box" class="continue-box hidden">
+        <p id="continue-blurb" style="margin:0 0 8px;font-weight:800"></p>
+        <button type="button" class="btn primary" data-act="continue">Continue season</button>
+      </div>
+      <form id="setup-form">
+        <label class="field">Your name <input id="player-name" maxlength="18" autocomplete="nickname" placeholder="Nate" required></label>
+        <label class="field">Lamb's name <input id="lamb-name" maxlength="18" autocomplete="off" placeholder="Clover" required></label>
+        <p id="form-error" class="form-error"></p>
+        <button type="submit" class="btn primary" id="start-btn">Start day 1</button>
+      </form>
+      <p class="fine">Feed morning and evening. Wash Monday and Thursday, wrap legs Wednesday, walk the arena Tuesday and Saturday. Latch the gate. Progress saves on this device.</p>
+      <div id="trophy-wall"></div>
+    </div>
+  </section>
+  <section class="screen" id="screen-barn" data-screen="barn">
+    <div id="sky" class="sky morning"><div class="sun"></div><div class="moon"></div><div class="cloud c1"></div><div class="cloud c2"></div><div class="hills"></div></div>
+    <div class="barn-row">
+      <div class="barn">
+        <div class="roof"><span>COUNTY 4-H BARN</span></div>
+        <div class="stalls">
+          <div class="stall" id="stall-1">
+            <div class="plaque"><b id="stall1-name">Lamb</b><small>Your lamb · stall 1</small></div>
+            <div class="stall-stage" id="player-lamb"></div>
+            <div class="straw"></div>
+            <div class="gate-wrap"><span id="gate-label">Unlatched</span><button type="button" id="gate" data-act="gate" aria-label="Latch or unlatch the stall gate"><span class="latch-knob"></span></button></div>
+          </div>
+          <div class="stall" id="stall-2">
+            <div class="plaque"><b>Biscuit</b><small>Neighbor · stall 2</small></div>
+            <div class="stall-stage" id="neighbor-lamb"></div>
+            <div class="straw"></div>
+          </div>
+          <div class="stall" id="stall-3">
+            <div class="plaque"><b>Open stall</b><small>Stall 3</small></div>
+            <div class="stall-stage"><div class="bucket" title="Water bucket"></div></div>
+            <div class="straw"></div>
+          </div>
+        </div>
+      </div>
+      <aside id="checklist"></aside>
+    </div>
+    <p id="flavor"></p>
+    <div id="actions" class="actions"></div>
+  </section>
+  <section class="screen overlay" id="screen-feed" data-screen="feed">
+    <div class="subhead"><button type="button" class="btn ghost" data-act="barn">Barn</button><h2 id="feed-title">Feeding time</h2><span id="feed-count">0/3</span></div>
+    <p class="hint" id="feed-hint">Drag the scoop into the trough, or tap Pour. Three scoops make a meal.</p>
+    <div class="task-meter"><b id="feed-meter"></b></div>
+    <div class="feed-stage" id="feed-stage"><div id="feed-lamb"></div><div id="trough" class="trough"><span>TROUGH</span><div id="grain-pile"></div></div><div class="sack"><button type="button" id="scoop" class="scoop">Scoop</button></div></div>
+    <div class="actions"><button type="button" class="btn primary" data-act="pour">Pour a scoop</button></div>
+  </section>
+  <section class="screen overlay" id="screen-wash" data-screen="wash">
+    <div class="subhead"><button type="button" class="btn ghost" data-act="barn">Barn</button><h2>Wash and blow-dry</h2></div>
+    <p class="hint" id="wash-hint">Scrub the wool, then aim the dryer.</p>
+    <div class="task-meter"><b id="wash-meter"></b></div>
+    <div id="wash-stage"><div id="wash-lamb"></div><div id="dryer"><div class="dryer-nozzle"></div><div class="dryer-body"></div></div></div>
+  </section>
+  <section class="screen overlay" id="screen-wrap" data-screen="wrap">
+    <div class="subhead"><button type="button" class="btn ghost" data-act="barn">Barn</button><h2>Leg wraps</h2></div>
+    <p class="hint" id="wrap-hint">Circle a finger around each leg, or tap a leg four times.</p>
+    <div id="wrap-legs"></div>
+  </section>
+  <section class="screen overlay" id="screen-arena" data-screen="arena">
+    <div class="subhead"><button type="button" class="btn ghost" data-act="arena-leave">Leave</button><h2 id="arena-title">Arena practice</h2></div>
+    <div class="arena-hud"><span id="lap-label">Lap 0%</span><span id="arena-timer">0:50</span></div>
+    <div id="arena-field"><div id="chalk"></div><svg class="lead-svg"><line id="lead-line" x1="0" y1="0" x2="0" y2="0"></line></svg>
+      <div id="judge" class="judge hidden"><div class="hat"></div><div class="head"></div><div class="coat"></div>Judge</div>
+      <div id="handler" class="actor handler"></div><div id="arena-lamb" class="actor"></div>
+    </div>
+    <p class="hint">Lead clockwise on the chalk. Drag the ring, use the joystick, or press WASD / arrows.</p>
+  </section>
+  <section class="screen overlay" id="screen-chase" data-screen="chase">
+    <div class="subhead"><button type="button" class="btn ghost" data-act="chase-giveup">Give up</button><h2 id="chase-title">Lamb loose!</h2></div>
+    <div class="chase-hud"><span id="chase-blurb">Catch your lamb</span><span id="chase-timer">0:26</span></div>
+    <div id="chase-field"><div class="bale" id="bale-0"></div><div class="bale" id="bale-1"></div><div class="bale" id="bale-2"></div>
+      <div id="kid" class="actor kid"><div class="hat"></div><div class="face"></div><div class="torso"></div><div class="legs"></div></div>
+      <div id="chase-lamb" class="actor"></div>
+    </div>
+    <p class="hint">Joystick, drag the pasture, or WASD / arrows. Get close to catch.</p>
+    <div id="chase-result" class="hidden"><h3 id="chase-result-title" style="margin:0 0 6px;font-family:Georgia,serif"></h3><p id="chase-result-body"></p><button type="button" class="btn primary" data-act="chase-continue">Tuck back into the stall</button></div>
+  </section>
+  <section class="screen overlay" id="screen-results" data-screen="results">
+    <div class="results-card">
+      <div id="show-lamb"></div>
+      <div id="ribbon" class="ribbon blue"><div class="rosette"><span id="ribbon-place">Blue Ribbon</span></div><div class="tails"></div></div>
+      <h2 id="result-heading">County fair</h2>
+      <p id="big-score">0</p>
+      <p id="result-weight"></p>
+      <div class="bars" id="breakdown"></div>
+      <p class="quote" id="judge-quote"></p>
+      <p class="fine" id="result-stats" style="color:#ffe7c2"></p>
+      <div><button type="button" class="btn primary" data-act="again">Raise another lamb</button><button type="button" class="btn ghost" data-act="same-again">Same names, new season</button></div>
+    </div>
+  </section>
+  <div id="joystick" class="hidden"><div id="joy-knob"></div></div>
+  <div id="tutorial" class="hidden"><div class="tut-card"><p id="tut-text" style="margin:0 0 8px"></p><div class="tut-row"><button type="button" class="btn ghost" data-act="tut-skip">Skip</button><button type="button" class="btn primary" data-act="tut-next">Next</button></div></div></div>
+  <div id="toast" role="status"></div>
+  <div id="night-veil"></div>
+  <div id="confetti"></div>
+  <div id="modal" class="modal-back hidden" role="dialog" aria-modal="true"><div class="modal-card"><h3 id="modal-title"></h3><p id="modal-body"></p><div id="modal-actions"></div></div></div>
+  <div id="dev-modal" class="modal-back hidden" role="dialog"><div class="dev-card"><h3>Skip to a day</h3><p class="fine">Testing tool. Simulate writes good-care history for skipped days. Raw jump only changes the day number.</p><input id="dev-day" type="number" min="1" max="300" value="300"><div class="dev-actions"><button type="button" class="btn primary" data-act="dev-sim">Jump and simulate care</button><button type="button" class="btn ghost" data-act="dev-raw">Jump, keep stats</button><button type="button" class="btn ghost" data-act="dev-reset">Erase save</button><button type="button" class="btn ghost" data-act="dev-close">Close</button></div></div></div>
+  <div id="fabs"><button type="button" id="mute" class="fab" data-act="mute">Sound</button><button type="button" id="gear" class="fab" data-act="gear" hidden title="Skip days">&#9881;</button></div>
+</div>
+
+<noscript><p style="padding:16px">Show Lamb needs JavaScript.</p></noscript>
+<script>
+
+(() => {
+  'use strict';
+  const SAVE_KEY = 'showLamb.save.v1';
+  const WD = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const TARGET_GAIN = 102;
+  const SHAPES = [];
+  let SHAPE_SUM = 0;
+  for (let d = 1; d <= 300; d++) {
+    const t = (d - 1) / 299;
+    const v = 0.55 + Math.sin(Math.PI * Math.pow(t, 0.72)) * 0.9 + (1 - t) * 0.15;
+    SHAPES.push(v); SHAPE_SUM += v;
+  }
+  let state = null, soundPref = true, toastTimer = 0, feedTimer = 0, modalOpen = false, modalResolve = null;
+  let tutorial = { open: false, step: 0 };
+  const feed = { scoops: 0, done: false };
+  const wash = { phase: 'scrub', scrub: 0, dry: 0, down: false, gesture: 0, done: false, last: null };
+  const wrap = { acc: [0,0,0,0], last: [null,null,null,null], moved: [0,0,0,0], active: -1, done: false };
+  const input = { keys: new Set(), joy: { x:0,y:0,active:false,id:null }, pointer: { on:false,x:0,y:0,field:'' } };
+  const arena = { running:false, locked:false, mode:'practice', handler:{x:0,y:0}, lamb:{x:0,y:0}, progress:0, lastAng:null, good:0, total:0, time:50, raf:0, last:0, w:0,h:0,cx:0,cy:0,rx:1,ry:1 };
+  const chase = { running:false, resolved:false, player:{x:0,y:0}, lamb:{x:0,y:0,vx:0,vy:0}, time:26, raf:0, last:0, w:0,h:0, obstacles:[], jink:0, nextJink:0, dustAt:0, baaAt:0 };
+  const clamp = (n,a,b) => Math.max(a, Math.min(b, n));
+  const avg = (arr) => arr.reduce((s,n)=>s+n,0) / (arr.length || 1);
+  const $ = (id) => document.getElementById(id);
+  function esc(s){return String(s).replace(/[&<>"']/g, (c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+  function cleanName(s){return String(s||'').replace(/[<>]/g,'').replace(/\s+/g,' ').trim().slice(0,18);}
+  function defaultState(){
+    return { v:1, playerName:'', lambName:'', day:1, period:'morning', phase:'setup', weight:20, hunger:50, cleanliness:90, stress:4, streak:0, bestStreak:0, club:0, meals:0, feedMisses:0, fedMorning:false, fedEvening:false, didWash:false, didWrap:false, didPractice:false, gateLatched:false, washes:0, wraps:0, practices:[], escapeSuccess:0, escapeFail:0, escapeDays:[], seed:1, escapeReason:'', escapeCaught:null, tutorialDone:false, sound:true, showGainApplied:false, lastGain:0, result:null, trophies:[] };
+  }
+  function soundOn(){ return state ? state.sound !== false : soundPref; }
+  const SFX = {
+    ctx:null, enabled:true,
+    init(){ if(!this.ctx){ const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return; this.ctx=new AC(); } if(this.ctx.state==='suspended') this.ctx.resume(); },
+    env(t,dur,peak){ const g=this.ctx.createGain(); g.connect(this.ctx.destination); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(peak,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+dur); return g; },
+    beep(freq,dur,type,peak){ if(!this.enabled||!soundOn()) return; this.init(); if(!this.ctx) return; const t=this.ctx.currentTime; const o=this.ctx.createOscillator(); o.type=type||'sine'; o.frequency.setValueAtTime(freq,t); o.connect(this.env(t,dur,peak||0.05)); o.start(t); o.stop(t+dur+0.02); },
+    baa(start){ if(!this.enabled||!soundOn()) return; this.init(); if(!this.ctx) return; const t=this.ctx.currentTime; const o=this.ctx.createOscillator(); const o2=this.ctx.createOscillator(); o.type='sawtooth'; o2.type='triangle'; const f0=start||380; o.frequency.setValueAtTime(f0,t); o.frequency.exponentialRampToValueAtTime(160,t+0.34); o2.frequency.setValueAtTime(f0*1.5,t); o2.frequency.exponentialRampToValueAtTime(220,t+0.34); const f=this.ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.setValueAtTime(900,t); f.frequency.exponentialRampToValueAtTime(380,t+0.3); const g=this.env(t,0.36,0.045); o.connect(f); o2.connect(f); f.connect(g); o.start(t); o2.start(t); o.stop(t+0.4); o2.stop(t+0.4); },
+    chew(){ this.beep(190,0.07,'square',0.03); setTimeout(()=>this.beep(140,0.06,'square',0.025),110); setTimeout(()=>this.beep(170,0.06,'square',0.02),220); },
+    whoosh(){ if(!this.enabled||!soundOn()) return; this.init(); if(!this.ctx) return; const ctx=this.ctx, dur=0.12, n=Math.floor(ctx.sampleRate*dur); const buf=ctx.createBuffer(1,n,ctx.sampleRate); const data=buf.getChannelData(0); for(let i=0;i<n;i++) data[i]=Math.random()*2-1; const src=ctx.createBufferSource(); src.buffer=buf; const f=ctx.createBiquadFilter(); f.type='bandpass'; f.frequency.value=1400; const g=ctx.createGain(); const t=ctx.currentTime; g.gain.setValueAtTime(0.03,t); g.gain.exponentialRampToValueAtTime(0.001,t+dur); src.connect(f); f.connect(g); g.connect(ctx.destination); src.start(); },
+    happy(){ [523,659,784].forEach((f,i)=>setTimeout(()=>this.beep(f,0.12,'triangle',0.05), i*90)); },
+    sad(){ this.beep(320,0.18,'sine',0.05); setTimeout(()=>this.beep(180,0.28,'sine',0.05),150); },
+    fanfare(tier){ const notes = tier===0 ? [523,659,784,1046] : tier<=2 ? [494,622,740,880] : [392,494,587]; notes.forEach((n,i)=>setTimeout(()=>this.beep(n,0.18,'triangle',0.06), i*140)); }
+  };
+  function lambSVG(opts){
+    const cls = 'lamb' + (opts.extra ? ' '+opts.extra : '');
+    return '<div class="'+cls+'" style="--dirt:'+(opts.dirt||0)+'"><svg class="lamb-svg" viewBox="0 0 280 210" role="img" aria-label="'+esc(opts.label||'lamb')+'">'
+      +'<ellipse class="ground-shadow" cx="140" cy="198" rx="72" ry="9"/>'
+      +'<g class="bob"><g class="breathe">'
+      +'<g class="legs"><rect class="leg-shape" x="92" y="150" width="13" height="42" rx="6"/><rect class="hoof" x="90" y="186" width="17" height="8" rx="3"/>'
+      +'<rect class="leg-shape" x="114" y="154" width="12" height="38" rx="6"/><rect class="hoof" x="112" y="186" width="16" height="8" rx="3"/>'
+      +'<rect class="leg-shape" x="148" y="154" width="12" height="38" rx="6"/><rect class="hoof" x="146" y="186" width="16" height="8" rx="3"/>'
+      +'<rect class="leg-shape" x="170" y="148" width="13" height="44" rx="6"/><rect class="hoof" x="168" y="186" width="17" height="8" rx="3"/></g>'
+      +'<g class="tail"><circle class="wool" cx="58" cy="118" r="16"/></g>'
+      +'<g class="body"><circle class="wool" cx="96" cy="124" r="32"/><circle class="wool" cx="132" cy="112" r="40"/><circle class="wool" cx="118" cy="142" r="30"/><circle class="wool" cx="160" cy="128" r="32"/><circle class="wool" cx="108" cy="100" r="26"/><circle class="wool" cx="154" cy="104" r="24"/>'
+      +'<g class="dirt"><ellipse cx="108" cy="124" rx="12" ry="8" transform="rotate(-18 108 124)"/><ellipse cx="146" cy="136" rx="10" ry="6"/><ellipse cx="124" cy="108" rx="8" ry="5"/><ellipse cx="90" cy="136" rx="7" ry="5"/></g></g>'
+      +'<g class="head"><g class="ear-front"><ellipse class="ear-outer" cx="188" cy="62" rx="14" ry="24" transform="rotate(-32 188 62)"/><ellipse class="ear-inner" cx="190" cy="66" rx="7" ry="14" transform="rotate(-32 190 66)"/></g>'
+      +'<circle class="wool" cx="176" cy="108" r="22"/><ellipse class="face" cx="214" cy="90" rx="36" ry="30"/><circle class="wool" cx="186" cy="74" r="16"/>'
+      +'<g class="eye-group"><ellipse class="eye-white" cx="224" cy="82" rx="7.2" ry="8.2"/><circle class="pupil" cx="226" cy="84" r="3.1"/><circle cx="228" cy="81.5" r="1.3" fill="#fff"/></g>'
+      +'<ellipse class="muzzle" cx="242" cy="102" rx="14" ry="10"/><ellipse cx="248" cy="100" rx="1.7" ry="1.3" fill="#5a4038"/><ellipse cx="240" cy="103" rx="1.7" ry="1.3" fill="#5a4038"/>'
+      +'<path class="mouth smile" d="M234 110 Q246 118 254 108" fill="none" stroke="#3a2a28" stroke-width="1.8" stroke-linecap="round"/>'
+      +'<path class="mouth frown" d="M234 114 Q246 106 254 114" fill="none" stroke="#3a2a28" stroke-width="1.8" stroke-linecap="round"/>'
+      +'<g class="halter"><path d="M186 78 Q206 68 230 80"/><path d="M196 104 Q214 96 236 108"/><path d="M208 74 L210 104"/><path d="M224 78 L226 108"/>'
+      +'<circle class="bell" cx="236" cy="114" r="4" fill="#e0b84a" stroke="#8a6234" stroke-width="1"/></g></g>'
+      +'<text class="zzz" x="236" y="42">z z</text></g></g></svg></div>';
+  }
+  function mountLamb(id, opts){ const host=$(id); if(host) host.innerHTML = lambSVG(opts); }
+  function mountAll(){
+    mountLamb('setup-mascot', {label:'A show lamb'});
+    mountLamb('player-lamb', {label:'Your lamb'});
+    mountLamb('neighbor-lamb', {label:'Biscuit', extra:'biscuit n2'});
+    mountLamb('feed-lamb', {label:'Lamb at the trough'});
+    mountLamb('wash-lamb', {label:'Lamb being washed'});
+    mountLamb('arena-lamb', {label:'Lamb on the lead'});
+    mountLamb('chase-lamb', {label:'Loose lamb'});
+    mountLamb('show-lamb', {label:'Show lamb'});
+  }
+  function save(){ try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch(e){} }
+  function load(){
+    try {
+      const raw = localStorage.getItem(SAVE_KEY); if(!raw) return null;
+      const data = JSON.parse(raw); if(!data || data.v!==1) return null;
+      const s = Object.assign(defaultState(), data);
+      if(!Array.isArray(s.practices)) s.practices=[];
+      if(!Array.isArray(s.trophies)) s.trophies=[];
+      if(!Array.isArray(s.escapeDays) || !s.escapeDays.length) s.escapeDays = pickEscapeDays(s.seed||1);
+      return s;
+    } catch(e){ return null; }
+  }
+  function pickEscapeDays(seed){
+    let s = (seed>>>0) || 1; const days=new Set(); let guard=0;
+    while(days.size<10 && guard<500){ guard++; s = (Math.imul(s,1664525)+1013904223)>>>0; days.add(8+(s%270)); }
+    return [...days].sort((a,b)=>a-b);
+  }
+  const wdIndex = (day)=>(day-1)%7;
+  const dayName = (day)=>WD[wdIndex(day)];
+  const weekNum = (day)=>Math.floor((day-1)/7)+1;
+  const washAvailable = (day)=>{ const w=wdIndex(day); return w===0||w===3||day>=297; };
+  const wrapAvailable = (day)=> wdIndex(day)===2 || day>=294;
+  const practiceAvailable = (day)=>{ const w=wdIndex(day); return w===1||w===5||day>=296; };
+  function nextDay(pred){ for(let d=state.day+1; d<=300; d++) if(pred(d)) return d; return null; }
+  function computeGain(day, feeds, cleanliness, streak){
+    const base = SHAPES[day-1] / SHAPE_SUM * TARGET_GAIN;
+    const feedM = feeds>=2 ? 1 : feeds===1 ? 0.55 : 0.2;
+    const cleanM = 0.97 + 0.06 * clamp(cleanliness/100,0,1);
+    const streakM = 1 + Math.min(Math.max(streak,0),12)*0.0035;
+    return base * feedM * cleanM * streakM;
+  }
+  function applyGain(){
+    const feeds = (state.fedMorning?1:0)+(state.fedEvening?1:0);
+    const gain = computeGain(state.day, feeds, state.cleanliness, state.streak);
+    state.weight += gain; state.lastGain = gain; state.meals += feeds;
+    if(feeds>=2){ state.streak += 1; state.club += 4; state.stress = Math.max(0, state.stress-5); }
+    else { state.feedMisses += (2-feeds); state.streak = 0; state.stress = Math.min(100, state.stress + (feeds===0?14:6)); state.club += feeds; }
+    if(state.streak > state.bestStreak) state.bestStreak = state.streak;
+    return gain;
+  }
+  const growOf = ()=> 0.62 + clamp((state.weight-20)/108,0,1)*0.38;
+  const moodScore = ()=> clamp(state.hunger*0.42 + state.cleanliness*0.33 + (100-state.stress)*0.25, 0, 100);
+  function moodLabel(m){ if(m>=80) return 'Thriving'; if(m>=65) return 'Content'; if(m>=48) return 'Okay'; if(m>=32) return 'Hungry'; return 'Stressed'; }
+  function liveShow(){
+    const days = Math.max(1, state.day);
+    const expP = Math.max(1, days/7*2), expW = Math.max(1, days/7), expH = Math.max(1, days/7*2);
+    const pracAvg = state.practices.length ? avg(state.practices) : 60;
+    const coverage = Math.min(1, state.practices.length / expP);
+    const prac = state.practices.length ? pracAvg * (0.45+0.55*coverage) : (days<3 ? 62 : 30);
+    const wrapScore = Math.min(100, state.wraps / expW * 100);
+    const washScore = Math.min(100, state.washes / expH * 100);
+    const possible = Math.max(1, (days - (state.period==='morning'?1:0)) * 2);
+    const care = clamp(100 - (state.feedMisses / possible) * 100, 0, 100);
+    let s = prac*0.32 + wrapScore*0.22 + washScore*0.18 + care*0.28;
+    s -= Math.min(24, state.escapeFail*5);
+    s += Math.min(4, state.escapeSuccess*0.45);
+    return clamp(s,0,100);
+  }
+  function weightPoints(w){ if(w>=120 && w<=130) return 100; const dist = w<120 ? 120-w : w-130; return Math.max(0, 100 - dist*3.2); }
+  function scoreShow(walk){
+    const weightPts = weightPoints(state.weight);
+    const habit = Math.min(100, state.washes/64*100);
+    const coat = clamp(state.cleanliness*0.62 + habit*0.38, 0, 100);
+    const wrapScore = Math.min(100, state.wraps/30*100);
+    const prac = state.practices.length ? avg(state.practices)*(0.42+0.58*Math.min(1, state.practices.length/36)) : 28;
+    const care = clamp(100 - state.feedMisses*0.9, 0, 100);
+    const escape = clamp(100 - state.escapeFail*7, 0, 100);
+    const total = weightPts*0.30 + coat*0.16 + wrapScore*0.14 + prac*0.18 + care*0.10 + escape*0.05 + walk*0.07;
+    return { total: clamp(total,0,100), weightPts, coat, wrapScore, prac, care, escape, walk: clamp(walk,0,100) };
+  }
+  function ribbonFor(total){
+    if(total>=90) return {id:'grand', title:'Grand Champion', tier:0, pts:50, blurb:'Purple and gold. The whole barn would be proud.'};
+    if(total>=82) return {id:'reserve', title:'Reserve Champion', tier:1, pts:35, blurb:'Reserve champion, right there with the best.'};
+    if(total>=72) return {id:'blue', title:'Blue Ribbon', tier:2, pts:25, blurb:'A blue ribbon day at the county fair.'};
+    if(total>=58) return {id:'red', title:'Red Ribbon', tier:3, pts:15, blurb:'A red ribbon, and a long season of learning behind it.'};
+    return {id:'white', title:'White Ribbon', tier:4, pts:10, blurb:'A white ribbon, and a lamb who knows your voice.'};
+  }
+  function judgeQuote(parts){
+    const P=state.playerName, L=state.lambName, bits=[];
+    if(parts.weightPts>=95) bits.push(L+"'s weight sat right in the 120 to 130 pound window.");
+    else if(state.weight<120) bits.push(L+' finished a little light. Steady meals add the pounds.');
+    else bits.push(L+' came in heavier than the ideal window.');
+    bits.push(parts.coat>=80 ? 'The coat looked fresh and fitted.' : 'Another wash or two would have brightened the wool.');
+    bits.push(parts.wrapScore>=75 ? 'Those leg wraps showed real prep.' : 'Wednesday leg wraps are worth keeping up.');
+    bits.push(parts.prac>=75 ? 'The ring pattern looked practiced.' : 'More arena walks would steady the next season.');
+    bits.push(P+', thank you for the season you gave '+L+'.');
+    return bits.join(' ');
+  }
+  function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('on'), 3200); }
+  function modal(opts){
+    $('modal-title').textContent = opts.title; $('modal-body').textContent = opts.body;
+    const actions=$('modal-actions'); actions.innerHTML='';
+    $('modal').classList.remove('hidden'); modalOpen=true;
+    return new Promise((resolve)=>{
+      modalResolve = resolve;
+      opts.buttons.forEach((b)=>{ const btn=document.createElement('button'); btn.type='button'; btn.className='btn '+(b.primary?'primary':'ghost'); btn.textContent=b.label; btn.addEventListener('click', ()=>closeModal(b.id)); actions.appendChild(btn); });
+    });
+  }
+  function closeModal(id){ $('modal').classList.add('hidden'); modalOpen=false; const r=modalResolve; modalResolve=null; if(r) r(id||'stay'); }
+  function updateMute(){ const on=soundOn(); const b=$('mute'); b.textContent = on?'Sound':'Muted'; b.setAttribute('aria-pressed', on?'false':'true'); SFX.enabled=on; }
+  function showScreen(name){
+    document.querySelectorAll('.screen').forEach((s)=>s.classList.toggle('active', s.dataset.screen===name));
+    const hudOff = ['setup','feed','wash','wrap','arena','chase','results'].includes(name);
+    $('hud').hidden = hudOff;
+    $('gear').hidden = !(state && state.lambName && state.phase!=='setup');
+    const showJoy = name==='arena' || (name==='chase' && chase.running);
+    $('joystick').classList.toggle('hidden', !showJoy);
+    if(name!=='barn') $('checklist').classList.remove('open');
+    $('tutorial').classList.toggle('hidden', !(tutorial.open && name==='barn'));
+  }
+  function hidePlay(){
+    arena.running=false; chase.running=false;
+    cancelAnimationFrame(arena.raf); cancelAnimationFrame(chase.raf);
+    input.pointer.on=false; input.joy.active=false; input.joy.x=0; input.joy.y=0;
+    $('joystick').classList.add('hidden');
+    $('joy-knob').style.transform='translate(0px,0px)';
+  }
+  function nightTransition(cb){ const v=$('night-veil'); v.classList.add('on'); setTimeout(()=>{ cb(); requestAnimationFrame(()=>v.classList.remove('on')); }, 480); }
+  function triggerHappy(el){ if(!el) return; el.classList.remove('happy'); void el.offsetWidth; el.classList.add('happy'); }
+  function syncLamb(root, opts){
+    if(!root) return; const lamb=root.querySelector('.lamb'); if(!lamb) return;
+    lamb.style.setProperty('--dirt', clamp((100-(opts.cleanliness??90))/100,0,1).toFixed(3));
+    lamb.classList.toggle('hungry', !!opts.hungry);
+    lamb.classList.toggle('sleepy', !!opts.sleepy);
+    lamb.classList.toggle('filthy', (opts.cleanliness??90)<42);
+    if(opts.grow!=null) root.style.setProperty('--grow', String(opts.grow));
+  }
+
+  function flavorText(){
+    const P=state.playerName, L=state.lambName;
+    if(state.day>=300 && state.period==='evening') return 'Show day, '+P+'. '+L+' has one last evening before the ring.';
+    if(state.day>=300) return 'It is day 300, '+P+'. Fit '+L+', then enter the ring.';
+    if(state.hunger<36) return P+', '+L+' is hungry.';
+    if(state.cleanliness<42) return L+"'s wool is getting dusty. A wash would help.";
+    if(!state.gateLatched && state.escapeDays.includes(state.day)) return L+' keeps nosing the latch.';
+    if(!state.gateLatched) return 'The stall gate is open. Latch it so '+L+' stays put.';
+    if(state.period==='evening' && !state.fedEvening) return 'Evening chores, '+P+'. '+L+' is waiting by the trough.';
+    if(state.period==='morning' && !state.fedMorning) return 'Good morning, '+P+'. '+L+' is ready for breakfast.';
+    return P+', '+L+' looks '+moodLabel(moodScore()).toLowerCase()+' in the straw.';
+  }
+  function renderHud(){
+    $('day-label').textContent = 'Day '+state.day+' of 300';
+    $('date-label').textContent = 'Week '+weekNum(state.day)+' · '+dayName(state.day);
+    $('weight-label').textContent = state.weight.toFixed(1);
+    $('club-label').textContent = String(state.club);
+    $('season-fill').style.width = (state.day/300*100)+'%';
+    $('hunger-num').textContent = String(Math.round(state.hunger));
+    $('clean-num').textContent = String(Math.round(state.cleanliness));
+    const show = Math.round(liveShow()); const mood = moodScore();
+    $('show-num').textContent = String(show);
+    $('mood-num').textContent = moodLabel(mood);
+    $('hunger-bar').style.width = clamp(state.hunger,0,100)+'%';
+    $('clean-bar').style.width = clamp(state.cleanliness,0,100)+'%';
+    $('show-bar').style.width = show+'%';
+    $('mood-bar').style.width = mood+'%';
+    $('clock').classList.toggle('evening', state.period==='evening');
+    $('clock-label').textContent = state.period==='evening' ? '6:30 PM' : '7:00 AM';
+    $('stall1-name').textContent = state.lambName;
+    $('sky').classList.toggle('morning', state.period!=='evening');
+    $('sky').classList.toggle('evening', state.period==='evening');
+    $('stall-1').classList.toggle('latched', state.gateLatched);
+    $('gate').setAttribute('aria-pressed', state.gateLatched?'true':'false');
+    $('gate-label').textContent = state.gateLatched ? 'Latched' : 'Unlatched';
+    const hungry = state.hunger<38;
+    syncLamb($('player-lamb'), { cleanliness: state.cleanliness, hungry, sleepy: state.period==='evening' && !hungry, grow: growOf() });
+    syncLamb($('neighbor-lamb'), { cleanliness: 78, hungry:false, sleepy: state.period==='evening' });
+    $('flavor').textContent = flavorText();
+  }
+  function chip(kind){
+    const done = kind==='wash'?state.didWash:kind==='wrap'?state.didWrap:state.didPractice;
+    if(done) return 'Done';
+    const pred = kind==='wash'?washAvailable:kind==='wrap'?wrapAvailable:practiceAvailable;
+    if(pred(state.day)) return 'Today';
+    const n = nextDay(pred); return n ? dayName(n) : '—';
+  }
+  function row(name, chipText, cls, act){
+    return '<button type="button" class="check-item '+cls+'"'+(act?' data-act="'+act+'"':' disabled')+'><span>'+name+'</span><small>'+chipText+'</small></button>';
+  }
+  function renderChecklist(){
+    const mFeed = state.fedMorning ? 'done' : (state.period==='evening' ? 'missed' : 'ready');
+    const eFeed = state.fedEvening ? 'done' : (state.period==='evening' ? 'ready' : 'later');
+    const wS = state.didWash?'done':washAvailable(state.day)?'ready':'later';
+    const rS = state.didWrap?'done':wrapAvailable(state.day)?'ready':'later';
+    const pS = state.didPractice?'done':practiceAvailable(state.day)?'ready':'later';
+    $('checklist').innerHTML = '<h2>Today in the barn</h2><p class="check-sub">Week '+weekNum(state.day)+' · '+dayName(state.day)+' · washes '+state.washes+' · wraps '+state.wraps+' · walks '+state.practices.length+'</p>'
+      + row('Morning feed', mFeed==='missed'?'Missed':mFeed==='done'?'Done':'Needed', mFeed, mFeed==='ready'?'feed':'')
+      + row('Evening feed', eFeed==='done'?'Done':eFeed==='ready'?'Needed':'Evening', eFeed, eFeed==='ready'?'feed':'')
+      + row('Latch the gate', state.gateLatched?'Latched':'Optional', state.gateLatched?'done':'ready', 'gate')
+      + row('Wash and blow-dry', chip('wash'), wS, wS==='ready'?'wash':'')
+      + row('Leg wraps', chip('wrap'), rS, rS==='ready'?'wrap':'')
+      + row('Arena practice', chip('practice'), pS, pS==='ready'?'practice':'')
+      + '<p class="fine" style="margin:8px 0 0">Wash Mon and Thu · wrap Wed · arena Tue and Sat. The last show days open every fitting chore.</p>';
+  }
+  function renderActions(){
+    const L = esc(state.lambName); const btns=[];
+    btns.push('<button type="button" class="btn ghost" data-act="chores">Today\'s chores</button>');
+    if(state.period==='morning' && !state.fedMorning) btns.push('<button type="button" class="btn primary'+(state.day<=2?' pulse':'')+'" data-act="feed">Feed '+L+'</button>');
+    if(state.period==='evening' && !state.fedEvening) btns.push('<button type="button" class="btn primary" data-act="feed">Evening feed</button>');
+    if(washAvailable(state.day) && !state.didWash) btns.push('<button type="button" class="btn" data-act="wash">Wash and blow-dry</button>');
+    if(wrapAvailable(state.day) && !state.didWrap) btns.push('<button type="button" class="btn" data-act="wrap">Wrap legs</button>');
+    if(practiceAvailable(state.day) && !state.didPractice) btns.push('<button type="button" class="btn" data-act="practice">Arena practice</button>');
+    if(state.day>=300){
+      btns.push('<button type="button" class="btn primary" data-act="show">Enter the show ring</button>');
+      if(state.period==='morning') btns.push('<button type="button" class="btn ghost" data-act="evening">Afternoon / Evening</button>');
+    } else if(state.period==='morning') btns.push('<button type="button" class="btn ghost" data-act="evening">Afternoon / Evening</button>');
+    else btns.push('<button type="button" class="btn ghost" data-act="sleep">Sleep — next day</button>');
+    $('actions').innerHTML = btns.join('');
+  }
+  function renderAll(){ if(!state) return; renderHud(); renderChecklist(); renderActions(); if(tutorial.open) renderTutorial(); }
+  function publicTrophy(r){ return { id:r.id, playerName:r.playerName, lambName:r.lambName, weight:r.weight, score:r.score, title:r.title, ribbon:r.ribbon, date:r.date }; }
+  function collectTrophies(){
+    const trophies = (state && state.trophies) ? state.trophies.slice() : [];
+    if(state && state.result && !trophies.some((t)=>t.id===state.result.id)) trophies.unshift(publicTrophy(state.result));
+    return trophies.slice(0,8);
+  }
+  function renderTrophies(){
+    const wall=$('trophy-wall'); const list = state && state.trophies ? state.trophies : [];
+    if(!list.length){ wall.innerHTML=''; return; }
+    wall.innerHTML = '<p class="fine" style="margin-bottom:0">Ribbon wall</p><div class="trophies">'+list.map((t)=>'<span class="trophy-pill">'+esc(t.lambName)+' · '+esc(t.title)+' · '+Number(t.weight).toFixed(1)+' lb</span>').join('')+'</div>';
+  }
+  function showSetup(){
+    showScreen('setup');
+    const running = !!(state && state.lambName && state.phase && state.phase!=='setup');
+    $('continue-box').classList.toggle('hidden', !running);
+    if(running) $('continue-blurb').textContent = state.playerName+' and '+state.lambName+' · Day '+state.day+' of 300 · '+state.weight.toFixed(1)+' lb';
+    if(state && state.playerName) $('player-name').value = state.playerName;
+    if(state && state.lambName) $('lamb-name').value = state.lambName;
+    $('start-btn').textContent = running ? 'Start a new season' : 'Start day 1';
+    renderTrophies(); $('hud').hidden=true; $('gear').hidden=true;
+  }
+  function startGame(player, lamb){
+    const trophies = collectTrophies(); const sound = soundOn();
+    state = defaultState();
+    state.playerName=player; state.lambName=lamb; state.trophies=trophies; state.sound=sound; state.phase='barn';
+    state.seed = (Date.now()%2147483646)+1; state.escapeDays = pickEscapeDays(state.seed);
+    save(); tutorial={open:true,step:0}; hidePlay(); showScreen('barn'); renderAll(); renderTutorial();
+  }
+  function resume(){
+    hidePlay(); if(!state) return showSetup();
+    if(state.phase==='results' && state.result) return showResults();
+    if(state.phase==='dawn') return beginNextMorning();
+    if(state.phase==='escape') return openChase();
+    if(state.phase==='escape-done') return showChaseResult(!!state.escapeCaught);
+    showScreen('barn'); renderAll();
+    if(state.day===1 && !state.tutorialDone && state.phase==='barn'){ tutorial.open=true; tutorial.step=0; renderTutorial(); }
+  }
+  const TUTORIAL = [
+    { sel:'#stall-1', text:()=> 'Welcome to the barn, '+state.playerName+'. '+state.lambName+' lives in stall 1. Biscuit next door belongs to a neighbor. You have 300 days until the county fair.' },
+    { sel:'#hud', text:()=> 'This bar is the season. '+state.lambName+' starts at 20.0 pounds. Hunger, coat, showmanship, and mood live here. A cared-for lamb finishes near 125 to 130.' },
+    { sel:'#actions', text:()=> 'Feed '+state.lambName+' every morning and every evening. Drag a scoop into the trough, or tap Pour, three times.' },
+    { sel:'#gate', text:()=> 'Latch the gate each day. An open latch makes it easier for a lamb to slip into the pasture.' },
+    { sel:'#checklist', openList:true, text:()=> 'Wash on Monday and Thursday, wrap legs on Wednesday, and practice the arena on Tuesday and Saturday. The chore list says what is due.' },
+    { sel:'#actions', text:()=> 'When morning is finished, tap Afternoon / Evening, feed again, then Sleep. Tap the lamb if you want a baa. Have a good season.' }
+  ];
+  function renderTutorial(){
+    if(!tutorial.open){ $('tutorial').classList.add('hidden'); setSpotlight(null); return; }
+    const step = TUTORIAL[tutorial.step];
+    $('tut-text').textContent = step.text();
+    $('tutorial').classList.remove('hidden');
+    const next = document.querySelector('[data-act="tut-next"]');
+    if(next) next.textContent = tutorial.step===TUTORIAL.length-1 ? "Let's go" : 'Next';
+    if(step.openList && window.matchMedia('(max-width: 899px)').matches) $('checklist').classList.add('open');
+    setSpotlight(step.sel);
+  }
+  function setSpotlight(sel){ document.querySelectorAll('.spotlight').forEach((el)=>el.classList.remove('spotlight')); if(!sel) return; const el=document.querySelector(sel); if(el) el.classList.add('spotlight'); }
+  function endTutorial(){ tutorial.open=false; if(state){ state.tutorialDone=true; save(); } $('tutorial').classList.add('hidden'); $('checklist').classList.remove('open'); setSpotlight(null); }
+  function openFeed(){
+    if(state.period==='morning' && state.fedMorning) return toast(state.lambName+' already had breakfast.');
+    if(state.period==='evening' && state.fedEvening) return toast(state.lambName+' already had supper.');
+    clearTimeout(feedTimer); feed.scoops=0; feed.done=false; $('grain-pile').style.height='0px';
+    $('feed-title').textContent = state.period==='evening' ? 'Evening feed' : 'Morning feed';
+    showScreen('feed');
+    syncLamb($('feed-lamb'), { cleanliness: state.cleanliness, hungry:true, grow: Math.max(0.72, growOf()) });
+    updateFeedUI();
+  }
+  function updateFeedUI(){ $('feed-count').textContent = feed.scoops+'/3'; $('feed-meter').style.width = (feed.scoops/3*100)+'%'; }
+  function pourScoop(){
+    if(feed.done || !$('screen-feed').classList.contains('active') || feed.scoops>=3) return;
+    feed.scoops++; SFX.beep(220+feed.scoops*30, 0.08, 'triangle', 0.04);
+    const trough=$('trough');
+    for(let i=0;i<8;i++){ const k=document.createElement('i'); k.className='kernel'; k.style.left=(20+Math.random()*60)+'%'; k.style.top=(-8-Math.random()*16)+'px'; trough.appendChild(k); setTimeout(()=>k.remove(),500); }
+    $('grain-pile').style.height = (feed.scoops*16)+'px'; updateFeedUI();
+    if(feed.scoops>=3) finishFeeding();
+  }
+  function finishFeeding(){
+    if(feed.done) return; feed.done=true;
+    if(state.period==='morning') state.fedMorning=true; else state.fedEvening=true;
+    state.hunger=100; state.stress=Math.max(0, state.stress-3); save();
+    const lamb=$('feed-lamb').querySelector('.lamb'); if(lamb) lamb.classList.add('eating');
+    SFX.chew(); setTimeout(()=>SFX.baa(480), 350);
+    feedTimer=setTimeout(()=>{ showScreen('barn'); renderAll(); triggerHappy($('player-lamb').querySelector('.lamb')); toast(state.lambName+' cleaned the trough.'); SFX.happy(); }, 1300);
+  }
+  function openWash(){
+    if(!washAvailable(state.day) || state.didWash) return;
+    wash.phase='scrub'; wash.scrub=0; wash.dry=0; wash.done=false; wash.down=false; wash.gesture=0;
+    showScreen('wash'); $('wash-stage').className='';
+    syncLamb($('wash-lamb'), { cleanliness: Math.min(state.cleanliness, 35), hungry:false, grow: Math.max(0.85, growOf()) });
+    const lamb=$('wash-lamb').querySelector('.lamb'); if(lamb) lamb.classList.add('filthy');
+    updateWashUI();
+  }
+  function updateWashUI(){
+    const stage=$('wash-stage'); const lamb=$('wash-lamb').querySelector('.lamb');
+    stage.classList.toggle('phase-dry', wash.phase==='dry' || wash.phase==='done');
+    if(wash.phase==='scrub'){
+      $('wash-hint').textContent='Scrub in circles on the wool until the suds lift the dust. Taps count too.';
+      $('wash-meter').style.width = clamp(wash.scrub/700*100,0,100)+'%';
+      if(lamb) lamb.style.setProperty('--dirt', clamp(0.9 - wash.scrub/700*0.75, 0.15, 0.95).toFixed(3));
+    } else if(wash.phase==='dry'){
+      $('wash-hint').textContent='Aim the blow-dryer and move it through the wool until it fluffs white.';
+      $('wash-meter').style.width = clamp(wash.dry,0,100)+'%';
+      if(lamb){ lamb.style.setProperty('--dirt', clamp(0.2-wash.dry/500,0,0.2).toFixed(3)); lamb.classList.toggle('fluffy', wash.dry>35); lamb.classList.toggle('filthy', wash.dry<20); }
+    } else {
+      $('wash-hint').textContent = state.lambName+' is fluffy and bright. Head back when you are ready.';
+      $('wash-meter').style.width='100%';
+      if(lamb){ lamb.style.setProperty('--dirt','0'); lamb.classList.add('fluffy'); lamb.classList.remove('filthy'); }
+    }
+  }
+  function bubble(parent,x,y){ const s=document.createElement('span'); s.className='sud'; s.style.left=x+'px'; s.style.top=y+'px'; parent.appendChild(s); setTimeout(()=>s.remove(),700); }
+  function washPointer(e, type){
+    if(!$('screen-wash').classList.contains('active')) return;
+    const stage=$('wash-stage'); const rect=stage.getBoundingClientRect();
+    const x=e.clientX-rect.left, y=e.clientY-rect.top;
+    const dryer=$('dryer'); dryer.style.left=x+'px'; dryer.style.top=y+'px';
+    const lb=$('wash-lamb').getBoundingClientRect();
+    const cx=lb.left+lb.width/2-rect.left, cy=lb.top+lb.height*0.55-rect.top;
+    const over = Math.hypot(x-cx,y-cy) < Math.max(90, lb.width*0.48);
+    if(type==='down'){ wash.down=true; wash.gesture=0; wash.last={x:e.clientX,y:e.clientY}; return; }
+    if(type==='move' && wash.down && wash.last){
+      const moved=Math.hypot(e.clientX-wash.last.x, e.clientY-wash.last.y); wash.gesture+=moved;
+      if(wash.phase==='scrub' && over){ wash.scrub+=moved; if(moved>5 && Math.random()<0.45) bubble(stage,x,y); if(wash.scrub>700){ wash.phase='dry'; SFX.beep(680,0.1,'triangle',0.05);} }
+      else if(wash.phase==='dry' && over){ wash.dry+=1.55; if(Math.random()<0.18) SFX.whoosh(); if(wash.dry>=100) completeWash(); }
+      wash.last={x:e.clientX,y:e.clientY}; updateWashUI();
+    }
+    if(type==='up'){
+      if(wash.gesture<16 && over && !wash.done){
+        if(wash.phase==='scrub'){ wash.scrub+=88; bubble(stage,x,y); SFX.beep(300,0.05,'sine',0.03); if(wash.scrub>700) wash.phase='dry'; }
+        else if(wash.phase==='dry'){ wash.dry+=11; SFX.whoosh(); if(wash.dry>=100) completeWash(); }
+        updateWashUI();
+      }
+      wash.down=false;
+    }
+  }
+  function completeWash(){
+    if(wash.done) return; wash.done=true; wash.phase='done';
+    state.cleanliness = Math.round(84 + clamp(wash.scrub/900,0,1)*16);
+    state.didWash=true; state.washes+=1; state.club+=5; state.stress=Math.max(0,state.stress-6); save();
+    SFX.happy(); triggerHappy($('wash-lamb').querySelector('.lamb')); updateWashUI();
+    toast(state.lambName+' is blown out and bright.');
+  }
+  const LEGS=['Front left','Front right','Rear left','Rear right'];
+  function openWrap(){
+    if(!wrapAvailable(state.day)||state.didWrap) return;
+    wrap.acc=[0,0,0,0]; wrap.last=[null,null,null,null]; wrap.moved=[0,0,0,0]; wrap.active=-1; wrap.done=false;
+    showScreen('wrap');
+    $('wrap-legs').innerHTML = LEGS.map((name,i)=>'<div class="leg-target" data-leg="'+i+'"><strong>'+name+'</strong><div class="limb"><i class="bandage"></i></div></div>').join('');
+    $('wrap-hint').textContent='Circle a finger around each leg, or tap a leg four times.';
+    updateWrapUI();
+  }
+  function updateWrapUI(){
+    document.querySelectorAll('.leg-target').forEach((el)=>{
+      const i=Number(el.dataset.leg); const p=clamp(wrap.acc[i]/(Math.PI*2),0,1);
+      const band=el.querySelector('.bandage'); if(band) band.style.height=(p*100)+'%';
+      el.classList.toggle('done', p>=1);
+    });
+    const left=wrap.acc.filter((a)=>a<Math.PI*2).length;
+    if(!wrap.done) $('wrap-hint').textContent = left===0 ? 'All four legs are wrapped.' : left+' leg'+(left===1?'':'s')+' still need a wrap. Circle or tap.';
+  }
+  function completeWrap(){
+    if(wrap.done) return; wrap.done=true; state.didWrap=true; state.wraps+=1; state.club+=3; state.stress=Math.max(0,state.stress-3); save();
+    SFX.happy(); $('wrap-hint').textContent='Neat wraps. '+state.lambName+' is one step closer to the ring.'; toast('Legs wrapped.');
+  }
+  function onLegDown(e){
+    const el=e.target.closest('.leg-target'); if(!el || !$('screen-wrap').classList.contains('active')) return;
+    const i=Number(el.dataset.leg); wrap.active=i;
+    const r=el.getBoundingClientRect();
+    wrap.last[i]=Math.atan2(e.clientY-(r.top+r.height/2), e.clientX-(r.left+r.width/2));
+    wrap.moved[i]=0;
+    if(el.setPointerCapture) el.setPointerCapture(e.pointerId);
+  }
+  function onLegMove(e){
+    if(wrap.active<0) return;
+    const el=document.querySelector('.leg-target[data-leg="'+wrap.active+'"]'); if(!el) return;
+    const i=wrap.active; const r=el.getBoundingClientRect();
+    const ang=Math.atan2(e.clientY-(r.top+r.height/2), e.clientX-(r.left+r.width/2));
+    if(wrap.last[i]!=null){ let d=ang-wrap.last[i]; while(d>Math.PI) d-=Math.PI*2; while(d<-Math.PI) d+=Math.PI*2; wrap.acc[i]=Math.min(Math.PI*2, wrap.acc[i]+Math.abs(d)); }
+    wrap.last[i]=ang; wrap.moved[i]+=Math.hypot(e.movementX||0, e.movementY||0); updateWrapUI();
+    if(wrap.acc.every((a)=>a>=Math.PI*2-0.01)) completeWrap();
+  }
+  function onLegUp(){
+    if(wrap.active<0) return; const i=wrap.active;
+    if(wrap.moved[i]<12 && wrap.acc[i]<Math.PI*2){ wrap.acc[i]=Math.min(Math.PI*2, wrap.acc[i]+Math.PI/2); SFX.beep(360+i*40,0.06,'triangle',0.04); updateWrapUI(); if(wrap.acc.every((a)=>a>=Math.PI*2-0.01)) completeWrap(); }
+    wrap.active=-1;
+  }
+
+  function readMove(){
+    let x = input.joy.active ? input.joy.x : 0, y = input.joy.active ? input.joy.y : 0;
+    const k=input.keys;
+    if(k.has('arrowleft')||k.has('a')) x-=1;
+    if(k.has('arrowright')||k.has('d')) x+=1;
+    if(k.has('arrowup')||k.has('w')) y-=1;
+    if(k.has('arrowdown')||k.has('s')) y+=1;
+    const m=Math.hypot(x,y); if(m>1){ x/=m; y/=m; }
+    return {x,y,mag:Math.min(1,m)};
+  }
+  function measure(id){ const r=$(id).getBoundingClientRect(); return {w:r.width,h:r.height}; }
+  function formatTime(t){ const s=Math.max(0, Math.ceil(t)); return '0:'+String(s).padStart(2,'0'); }
+  function openArena(mode){
+    hidePlay();
+    arena.mode=mode; arena.locked=false; arena.running=true; arena.progress=0; arena.lastAng=null; arena.good=0; arena.total=0;
+    arena.time = mode==='show'?60:50; arena.last=0;
+    $('arena-title').textContent = mode==='show' ? 'County fair ring' : 'Arena practice';
+    $('judge').classList.toggle('hidden', mode!=='show');
+    showScreen('arena'); $('joystick').classList.remove('hidden');
+    syncLamb($('arena-lamb'), { cleanliness: state.cleanliness, hungry: state.hunger<38, grow: Math.max(0.7, growOf()) });
+    requestAnimationFrame(()=>{
+      const box=measure('arena-field'); arena.w=box.w; arena.h=box.h; arena.cx=box.w/2; arena.cy=box.h/2+6;
+      arena.rx=Math.max(80, box.w*0.34); arena.ry=Math.max(60, box.h*0.30);
+      $('chalk').style.width=(arena.rx*2)+'px'; $('chalk').style.height=(arena.ry*2)+'px';
+      const ang=Math.PI;
+      arena.lamb.x=arena.cx+Math.cos(ang)*arena.rx; arena.lamb.y=arena.cy+Math.sin(ang)*arena.ry;
+      arena.handler.x=arena.lamb.x+36; arena.handler.y=arena.lamb.y-10;
+      arena.raf=requestAnimationFrame(arenaLoop);
+    });
+  }
+  function arenaLoop(ts){
+    if(!arena.running) return;
+    if(document.hidden||modalOpen){ arena.last=ts; arena.raf=requestAnimationFrame(arenaLoop); return; }
+    if(!arena.last) arena.last=ts;
+    const dt=Math.min(0.05,(ts-arena.last)/1000); arena.last=ts;
+    const mv=readMove(); const speed=220;
+    if(mv.mag>0.05){ arena.handler.x+=mv.x*speed*dt; arena.handler.y+=mv.y*speed*dt; }
+    if(input.pointer.on && input.pointer.field==='arena-field'){
+      const dx=input.pointer.x-arena.handler.x, dy=input.pointer.y-arena.handler.y, d=Math.hypot(dx,dy)||1;
+      if(d>8){ const step=Math.min(d, speed*1.15*dt); arena.handler.x+=dx/d*step; arena.handler.y+=dy/d*step; }
+    }
+    arena.handler.x=clamp(arena.handler.x,20,arena.w-20); arena.handler.y=clamp(arena.handler.y,20,arena.h-20);
+    const lx=arena.handler.x-arena.lamb.x, ly=arena.handler.y-arena.lamb.y, ld=Math.hypot(lx,ly)||1;
+    if(ld>28){ const follow=Math.min(ld,150)*3.1*dt; arena.lamb.x+=lx/ld*follow; arena.lamb.y+=ly/ld*follow; }
+    const nx=(arena.lamb.x-arena.cx)/arena.rx, ny=(arena.lamb.y-arena.cy)/arena.ry, e=Math.hypot(nx,ny)||1;
+    const on=Math.abs(e-1)<(arena.mode==='show'?0.34:0.28);
+    const ang=Math.atan2(ny,nx);
+    if(arena.lastAng!=null){ let dAng=ang-arena.lastAng; while(dAng>Math.PI) dAng-=Math.PI*2; while(dAng<-Math.PI) dAng+=Math.PI*2; if(dAng>0 && on) arena.progress+=dAng; }
+    arena.lastAng=ang; arena.total++; if(on) arena.good++; arena.time-=dt;
+    const lambEl=$('arena-lamb');
+    lambEl.style.transform='translate('+(arena.lamb.x-56)+'px,'+(arena.lamb.y-78)+'px)';
+    const lamb=lambEl.querySelector('.lamb'); if(lamb) lamb.classList.toggle('walking', ld>30);
+    $('handler').style.transform='translate('+arena.handler.x+'px,'+arena.handler.y+'px)';
+    const line=$('lead-line'); line.setAttribute('x1', arena.handler.x); line.setAttribute('y1', arena.handler.y); line.setAttribute('x2', arena.lamb.x-10); line.setAttribute('y2', arena.lamb.y-20);
+    const lap=clamp(arena.progress/(Math.PI*2),0,1);
+    $('lap-label').textContent='Lap '+Math.round(lap*100)+'% · '+(on?'on the chalk':'outside');
+    $('arena-timer').textContent=formatTime(arena.time);
+    if(lap>=1 || arena.time<=0){ finishArena(); return; }
+    arena.raf=requestAnimationFrame(arenaLoop);
+  }
+  function arenaScore(){
+    const lap=clamp(arena.progress/(Math.PI*2),0,1); const acc=arena.total?arena.good/arena.total:0;
+    let score=Math.round(lap*72+acc*28); if(lap<1) score=Math.round(score*0.86); return clamp(score,0,100);
+  }
+  function finishArena(){
+    if(arena.locked) return; arena.locked=true; arena.running=false; cancelAnimationFrame(arena.raf); hidePlay();
+    const score=arenaScore(); const lap=arena.progress/(Math.PI*2);
+    if(arena.mode==='practice'){
+      if(lap>=0.25){ state.practices.push(score); if(state.practices.length>500) state.practices.shift(); state.didPractice=true; state.club+=Math.max(2, Math.round(score/25)); state.stress=Math.max(0,state.stress-4); save(); toast('Practice score '+score+'. '+state.lambName+' knows the pattern a little better.'); SFX.happy(); }
+      else toast('No score yet. Lead most of a clockwise lap.');
+      showScreen('barn'); renderAll();
+    } else completeShow(score);
+  }
+  function shouldEscape(){
+    const done=state.escapeSuccess+state.escapeFail;
+    if(done>=14 || state.day>=300) return false;
+    const scheduled=state.escapeDays.includes(state.day);
+    let p = scheduled ? (state.gateLatched?0.82:0.97) : (state.gateLatched?0.004:0.045);
+    if(done>=12) p*=0.35;
+    return Math.random()<p;
+  }
+  function openChase(){
+    hidePlay(); chase.resolved=false; chase.running=true; chase.time=26; chase.last=0; chase.jink=0; chase.nextJink=0; chase.dustAt=0; chase.baaAt=0;
+    $('chase-result').classList.add('hidden');
+    const spook=state.escapeReason==='spook';
+    $('chase-title').textContent = spook ? 'Spooked!' : 'Lamb loose!';
+    $('chase-blurb').textContent = spook ? 'A noise sent '+state.lambName+' running.' : state.lambName+' slipped the gate.';
+    showScreen('chase'); $('joystick').classList.remove('hidden');
+    syncLamb($('chase-lamb'), { cleanliness: state.cleanliness, hungry:false, grow: Math.max(0.62, growOf()*0.9) });
+    requestAnimationFrame(()=>{
+      const box=measure('chase-field'); chase.w=box.w; chase.h=box.h;
+      chase.player.x=78; chase.player.y=Math.max(80, box.h-70);
+      chase.lamb.x=Math.max(140, box.w-90); chase.lamb.y=86; chase.lamb.vx=0; chase.lamb.vy=0;
+      chase.obstacles=[{x:box.w*0.40,y:box.h*0.42,r:28},{x:box.w*0.64,y:box.h*0.66,r:30},{x:box.w*0.52,y:box.h*0.24,r:24}];
+      chase.obstacles.forEach((o,i)=>{ const el=$('bale-'+i); el.style.left=o.x+'px'; el.style.top=o.y+'px'; });
+      SFX.baa(440); chase.raf=requestAnimationFrame(chaseLoop);
+    });
+  }
+  function pushCircle(ent,r){
+    chase.obstacles.forEach((o)=>{ let dx=ent.x-o.x, dy=ent.y-o.y, d=Math.hypot(dx,dy)||1; const min=r+o.r; if(d<min){ ent.x=o.x+dx/d*min; ent.y=o.y+dy/d*min; } });
+    ent.x=clamp(ent.x,24,chase.w-24); ent.y=clamp(ent.y,24,chase.h-24);
+  }
+  function puff(x,y){ const d=document.createElement('i'); d.className='puff'; d.style.left=x+'px'; d.style.top=y+'px'; $('chase-field').appendChild(d); setTimeout(()=>d.remove(),500); }
+  function chaseLoop(ts){
+    if(!chase.running) return;
+    if(document.hidden||modalOpen){ chase.last=ts; chase.raf=requestAnimationFrame(chaseLoop); return; }
+    if(!chase.last) chase.last=ts;
+    const dt=Math.min(0.05,(ts-chase.last)/1000); chase.last=ts;
+    const mv=readMove(); let ix=mv.x, iy=mv.y;
+    if(input.pointer.on && input.pointer.field==='chase-field'){
+      const dx=input.pointer.x-chase.player.x, dy=input.pointer.y-chase.player.y, d=Math.hypot(dx,dy)||1;
+      if(d>12){ ix+=dx/d; iy+=dy/d; }
+    }
+    const im=Math.hypot(ix,iy); if(im>1){ ix/=im; iy/=im; }
+    const moving = im>0.08 || (input.pointer.on && input.pointer.field==='chase-field');
+    if(moving){ chase.player.x+=ix*270*dt; chase.player.y+=iy*270*dt; }
+    pushCircle(chase.player,16);
+    const dx=chase.lamb.x-chase.player.x, dy=chase.lamb.y-chase.player.y, dist=Math.hypot(dx,dy)||1;
+    if(ts>chase.nextJink){ chase.jink=Math.random()*Math.PI*2; chase.nextJink=ts+650+Math.random()*700; }
+    let fx=Math.cos(chase.jink)*0.45, fy=Math.sin(chase.jink)*0.45;
+    if(dist<230){ fx+=dx/dist*1.35; fy+=dy/dist*1.35; const dodge=Math.sin(ts/170)*(dist<110?1.15:0.4); fx+=(-dy/dist)*dodge; fy+=(dx/dist)*dodge; }
+    if(chase.lamb.x<40) fx+=1.2; if(chase.lamb.x>chase.w-40) fx-=1.2; if(chase.lamb.y<40) fy+=1.2; if(chase.lamb.y>chase.h-40) fy-=1.2;
+    const fm=Math.hypot(fx,fy)||1; const lspeed=dist<100?236:188;
+    chase.lamb.vx=chase.lamb.vx*0.82+(fx/fm)*lspeed*0.18; chase.lamb.vy=chase.lamb.vy*0.82+(fy/fm)*lspeed*0.18;
+    chase.lamb.x+=chase.lamb.vx*dt; chase.lamb.y+=chase.lamb.vy*dt; pushCircle(chase.lamb,20);
+    if(moving && ts>chase.dustAt){ puff(chase.player.x, chase.player.y); chase.dustAt=ts+140; }
+    if(ts>chase.baaAt){ SFX.baa(360+Math.random()*80); chase.baaAt=ts+4200; }
+    $('kid').style.transform='translate('+chase.player.x+'px,'+chase.player.y+'px) scaleX('+(ix<-0.1?-1:1)+')';
+    $('chase-lamb').style.transform='translate('+(chase.lamb.x-52)+'px,'+(chase.lamb.y-70)+'px) scaleX('+(chase.lamb.vx>=0?1:-1)+')';
+    const node=$('chase-lamb').querySelector('.lamb'); if(node) node.classList.add('walking');
+    chase.time-=dt; const timer=$('chase-timer'); timer.textContent=formatTime(chase.time); timer.classList.toggle('low', chase.time<8);
+    if(dist<46){ endChase(true); return; }
+    if(chase.time<=0){ endChase(false); return; }
+    chase.raf=requestAnimationFrame(chaseLoop);
+  }
+  function endChase(success){
+    if(chase.resolved) return; chase.resolved=true; chase.running=false; cancelAnimationFrame(chase.raf); $('joystick').classList.add('hidden');
+    if(state.phase==='escape'){
+      if(success){ state.escapeSuccess++; state.stress=Math.max(0,state.stress-14); state.club+=8; SFX.happy(); SFX.baa(520);
+        for(let i=0;i<7;i++){ const h=document.createElement('i'); h.className='heart'; h.style.left=(chase.lamb.x+Math.random()*30-10)+'px'; h.style.top=(chase.lamb.y-40)+'px'; $('chase-field').appendChild(h); setTimeout(()=>h.remove(),900); }
+      } else { state.escapeFail++; state.stress=Math.min(100, state.stress+20); SFX.sad(); }
+      state.escapeCaught=!!success; state.phase='escape-done'; save();
+    }
+    showChaseResult(!!success);
+  }
+  function showChaseResult(success){
+    hidePlay(); showScreen('chase'); $('chase-result').classList.remove('hidden'); $('joystick').classList.add('hidden');
+    const L=state.lambName;
+    if(success){ $('chase-result-title').textContent='Got '+L+'!'; $('chase-result-body').textContent=L+' is back in your arms. Club points for a quick, kind catch, and a calmer lamb.'; }
+    else if(state.escapeReason==='gate'){ $('chase-result-title').textContent=L+' is back'; $('chase-result-body').textContent='A neighbor headed '+L+' off. An open gate made the night harder. '+L+' is safe, just rattled.'; }
+    else { $('chase-result-title').textContent=L+' is back'; $('chase-result-body').textContent='A neighbor caught '+L+' by the fence. Everyone is kind about it. '+L+' is safe, just a bit stressed.'; }
+  }
+  function finishDay(){
+    if(!state || state.phase!=='barn' || state.day>=300) return;
+    applyGain();
+    if(shouldEscape()){ state.phase='escape'; state.escapeReason=state.gateLatched?'spook':'gate'; state.escapeCaught=null; save(); nightTransition(()=>openChase()); }
+    else { state.phase='dawn'; save(); nightTransition(()=>beginNextMorning()); }
+  }
+  function rollToNextMorning(){
+    const eveningFed=state.fedEvening; const both=state.fedMorning&&state.fedEvening;
+    state.day+=1; state.period='morning'; state.phase='barn';
+    state.fedMorning=false; state.fedEvening=false; state.didWash=false; state.didWrap=false; state.didPractice=false; state.gateLatched=false;
+    state.cleanliness=Math.max(8, state.cleanliness-8);
+    state.hunger = (both||eveningFed) ? (38+Math.random()*12) : (16+Math.random()*8);
+    state.escapeCaught=null; state.showGainApplied=false;
+  }
+  function beginNextMorning(){
+    if(!state || state.phase==='barn' || state.phase==='results') return;
+    if(state.day>=300){ state.phase='show'; save(); showScreen('barn'); renderAll(); return; }
+    const gain=state.lastGain||0; rollToNextMorning(); save(); hidePlay(); showScreen('barn'); renderAll();
+    toast(state.lambName+' gained '+gain.toFixed(1)+' lb overnight — now '+state.weight.toFixed(1)+' lb.');
+  }
+  function applyPerfectToday(){
+    state.fedMorning=true; state.fedEvening=true;
+    if(washAvailable(state.day)){ state.washes++; state.cleanliness=98; }
+    if(wrapAvailable(state.day)) state.wraps++;
+    if(practiceAvailable(state.day)) state.practices.push(84);
+    state.gateLatched=true; applyGain();
+  }
+  function simulateTo(target){
+    target=clamp(target|0,1,300);
+    if(state.phase==='escape'||state.phase==='escape-done'||state.phase==='dawn') beginNextMorning();
+    let guard=0;
+    while(state.day<target && guard<400){ guard++; applyPerfectToday(); if(state.day>=target||state.day>=300) break; rollToNextMorning(); }
+    state.phase='barn'; state.period='morning'; state.showGainApplied=false; state.result=null;
+    state.fedMorning=false; state.fedEvening=false; state.didWash=false; state.didWrap=false; state.didPractice=false; save();
+  }
+  function rawJump(target){
+    target=clamp(target|0,1,300);
+    state.day=target; state.period='morning'; state.phase='barn';
+    state.fedMorning=false; state.fedEvening=false; state.didWash=false; state.didWrap=false; state.didPractice=false; state.gateLatched=false;
+    state.showGainApplied=false; state.result=null; save();
+  }
+  function completeShow(walk){
+    if(state.result){ showResults(); return; }
+    const parts=scoreShow(walk); const rib=ribbonFor(parts.total); state.club+=rib.pts;
+    state.result={ id:Date.now(), playerName:state.playerName, lambName:state.lambName, weight:state.weight, score:Math.round(parts.total), title:rib.title, ribbon:rib.id, blurb:rib.blurb, tier:rib.tier, parts, quote:judgeQuote(parts), meals:state.meals, washes:state.washes, wraps:state.wraps, walks:state.practices.length, date:new Date().toISOString() };
+    state.phase='results'; save(); showResults(); burst(rib.tier<=1?110:64); SFX.fanfare(rib.tier);
+  }
+  function showResults(){
+    if(!state||!state.result) return; const r=state.result; hidePlay(); showScreen('results');
+    syncLamb($('show-lamb'), { cleanliness: state.cleanliness, hungry:false, grow:1 });
+    triggerHappy($('show-lamb').querySelector('.lamb'));
+    $('ribbon').className='ribbon '+r.ribbon; $('ribbon-place').textContent=r.title;
+    $('result-heading').textContent=r.lambName+' · '+r.title; $('big-score').textContent=r.score+' / 100';
+    $('result-weight').textContent=r.lambName+' weighed '+Number(r.weight).toFixed(1)+' lb. Ideal class weight is 120 to 130.';
+    const labels=[['Weight',r.parts.weightPts],['Coat',r.parts.coat],['Leg wraps',r.parts.wrapScore],['Arena',r.parts.prac],['Daily care',r.parts.care],['Composure',r.parts.escape],['Ring walk',r.parts.walk]];
+    $('breakdown').innerHTML=labels.map((pair)=>'<div class="bar-row"><span>'+pair[0]+'</span><i><b style="width:'+Math.round(pair[1])+'%"></b></i><span>'+Math.round(pair[1])+'</span></div>').join('');
+    $('judge-quote').textContent=r.blurb+' '+r.quote;
+    $('result-stats').textContent='Meals '+r.meals+' · washes '+r.washes+' · wraps '+r.wraps+' · arena walks '+r.walks+' · club points '+state.club;
+  }
+  function burst(n){
+    const layer=$('confetti'); layer.innerHTML='';
+    const colors=['#8E2F2F','#E0A106','#FBF6EA','#3E6B45','#7ec8e3','#e39a6a','#5b2a86'];
+    for(let i=0;i<n;i++){ const s=document.createElement('i'); s.className='bit'; s.style.setProperty('--x', Math.random()*100+'%'); s.style.setProperty('--d', (Math.random()*0.35)+'s'); s.style.setProperty('--r', (Math.random()*600)+'deg'); s.style.background=colors[i%colors.length]; layer.appendChild(s); }
+    setTimeout(()=>{ layer.innerHTML=''; }, 3200);
+  }
+  async function enterShow(){
+    if(state.result) return showResults();
+    const feeds=(state.fedMorning?1:0)+(state.fedEvening?1:0);
+    if(!state.showGainApplied && feeds<2){
+      const c=await modal({ title:'Enter the ring?', body:'You can still feed and fit before the judge looks. Walking in now locks today\'s gain.', buttons:[{id:'stay',label:'Keep prepping',primary:true},{id:'go',label:'Enter now'}] });
+      if(c!=='go') return;
+    }
+    if(!state.showGainApplied){ applyGain(); state.showGainApplied=true; state.phase='show'; save(); }
+    openArena('show');
+  }
+  async function toEvening(){
+    if(!state.fedMorning){
+      const c=await modal({ title:state.lambName+' has not eaten', body:'Morning feed is the main meal. Skip it and today\'s gain drops.', buttons:[{id:'stay',label:'Stay and feed',primary:true},{id:'go',label:'Skip to evening'}] });
+      if(c!=='go') return;
+    }
+    state.period='evening'; state.hunger = state.fedMorning ? Math.max(30, state.hunger-46) : Math.max(12, state.hunger-16); save(); renderAll(); toast('Evening chores. The light is going gold.');
+  }
+  async function onSleep(){
+    if(!state.fedEvening){
+      const c=await modal({ title:'Sleep without evening feed?', body:state.lambName+' will gain less tonight if the trough stays empty.', buttons:[{id:'stay',label:'Go back',primary:true},{id:'go',label:'Sleep anyway'}] });
+      if(c!=='go') return;
+    }
+    finishDay();
+  }
+  async function goBarnFromTask(){
+    const feedMid=$('screen-feed').classList.contains('active') && feed.scoops>0 && !feed.done;
+    const washMid=$('screen-wash').classList.contains('active') && !wash.done && wash.scrub>40;
+    const wrapMid=$('screen-wrap').classList.contains('active') && !wrap.done && wrap.acc.some((a)=>a>0.2);
+    if(feedMid||washMid||wrapMid){
+      const c=await modal({ title:'Leave this chore?', body:'It will not count unless you finish it.', buttons:[{id:'stay',label:'Keep going',primary:true},{id:'go',label:'Back to barn'}] });
+      if(c!=='go') return;
+    }
+    clearTimeout(feedTimer); showScreen('barn'); renderAll();
+  }
+  async function leaveArena(){
+    if(arena.locked) return;
+    const lap=arena.progress/(Math.PI*2);
+    if(arena.mode==='show'){
+      const c=await modal({ title:'Leave the ring?', body:'The judge will score the pattern you have so far.', buttons:[{id:'stay',label:'Keep walking',primary:true},{id:'go',label:'Finish now'}] });
+      if(c!=='go') return; finishArena(); return;
+    }
+    if(lap>=0.35) finishArena();
+    else { arena.running=false; arena.locked=true; hidePlay(); showScreen('barn'); renderAll(); toast('No score. Finish most of a clockwise lap when you can.'); }
+  }
+  function openDev(){ if(!state||!state.lambName) return; $('dev-day').value=String(Math.min(300, state.day>=300?300:state.day+1)); $('dev-modal').classList.remove('hidden'); }
+  function closeDev(){ $('dev-modal').classList.add('hidden'); }
+  async function onAction(act){
+    if(act==='mute'){ const next=!soundOn(); soundPref=next; if(state){ state.sound=next; save(); } SFX.enabled=next; if(next) SFX.init(); updateMute(); return; }
+    if(act==='gear') return openDev();
+    if(act==='dev-close') return closeDev();
+    if(act==='dev-reset'){ try{ localStorage.removeItem(SAVE_KEY);}catch(e){} state=null; closeDev(); hidePlay(); tutorial.open=false; showSetup(); toast('Save erased.'); return; }
+    if(act==='dev-sim'||act==='dev-raw'){
+      const n=parseInt($('dev-day').value,10); if(!n) return; closeDev(); hidePlay();
+      if(act==='dev-sim') simulateTo(n); else rawJump(n);
+      showScreen('barn'); renderAll(); toast(act==='dev-sim'?'Jumped to day '+state.day+' with good-care history.':'Jumped to day '+state.day+'.'); return;
+    }
+    if(act==='tut-skip') return endTutorial();
+    if(act==='tut-next'){ if(tutorial.step>=TUTORIAL.length-1) endTutorial(); else { tutorial.step++; renderTutorial(); } return; }
+    if(act==='continue') return resume();
+    if(act==='chores'){ $('checklist').classList.toggle('open'); return; }
+    if(!state || state.phase==='setup') return;
+    if(act==='barn') return goBarnFromTask();
+    if(act==='feed') return openFeed();
+    if(act==='pour') return pourScoop();
+    if(act==='wash') return openWash();
+    if(act==='wrap') return openWrap();
+    if(act==='practice') return openArena('practice');
+    if(act==='gate'){ state.gateLatched=!state.gateLatched; save(); SFX.beep(state.gateLatched?250:170,0.07,'square',0.03); renderAll(); return; }
+    if(act==='evening') return toEvening();
+    if(act==='sleep') return onSleep();
+    if(act==='show') return enterShow();
+    if(act==='arena-leave') return leaveArena();
+    if(act==='chase-giveup'){ if(chase.running) endChase(false); return; }
+    if(act==='chase-continue'){ if(state.phase!=='escape-done') return; state.phase='dawn'; save(); nightTransition(()=>beginNextMorning()); return; }
+    if(act==='again'||act==='same-again'){
+      const trophies=collectTrophies(); const sound=soundOn(); const player=state.playerName, lamb=state.lambName;
+      state=defaultState(); state.trophies=trophies; state.sound=sound; state.phase='setup';
+      if(act==='same-again'){ state.playerName=player; state.lambName=lamb; }
+      save();
+      if(act==='same-again') startGame(player, lamb); else showSetup();
+    }
+  }
+  function bindField(id){
+    const field=$(id);
+    field.addEventListener('pointerdown',(e)=>{ if(e.target.closest('button')||e.target.closest('#joystick')) return; field.setPointerCapture(e.pointerId); input.pointer.on=true; input.pointer.field=id; const r=field.getBoundingClientRect(); input.pointer.x=e.clientX-r.left; input.pointer.y=e.clientY-r.top; });
+    field.addEventListener('pointermove',(e)=>{ if(!input.pointer.on||input.pointer.field!==id) return; const r=field.getBoundingClientRect(); input.pointer.x=e.clientX-r.left; input.pointer.y=e.clientY-r.top; });
+    const end=()=>{ if(input.pointer.field===id) input.pointer.on=false; };
+    field.addEventListener('pointerup', end); field.addEventListener('pointercancel', end);
+  }
+  function bind(){
+    document.body.addEventListener('click',(e)=>{ const b=e.target.closest('[data-act]'); if(!b) return; onAction(b.dataset.act); });
+    $('setup-form').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const player=cleanName($('player-name').value), lamb=cleanName($('lamb-name').value);
+      if(!player||!lamb){ $('form-error').textContent='Add your name and the lamb\'s name to start.'; return; }
+      $('form-error').textContent='';
+      if(state && state.lambName && state.phase!=='setup'){
+        const c=await modal({ title:'Start a new season?', body:'This replaces the current season with '+lamb+'. Ribbons stay on the wall.', buttons:[{id:'no',label:'Keep playing'},{id:'yes',label:'New season',primary:true}] });
+        if(c!=='yes') return;
+      }
+      SFX.init(); startGame(player, lamb);
+    });
+    document.addEventListener('pointerdown', ()=>SFX.init(), {passive:true});
+    const scoop=$('scoop'), stage=$('feed-stage');
+    scoop.addEventListener('pointerdown',(e)=>{
+      if(feed.done) return; scoop.setPointerCapture(e.pointerId); scoop.classList.add('dragging');
+      const move=(ev)=>{ const r=stage.getBoundingClientRect(); scoop.style.left=(ev.clientX-r.left-36)+'px'; scoop.style.top=(ev.clientY-r.top-18)+'px'; };
+      const up=(ev)=>{ scoop.removeEventListener('pointermove', move); scoop.removeEventListener('pointerup', up); const trough=$('trough').getBoundingClientRect(); const hit=ev.clientX>=trough.left-8 && ev.clientX<=trough.right+8 && ev.clientY>=trough.top-12 && ev.clientY<=trough.bottom+16; scoop.classList.remove('dragging'); scoop.style.left=''; scoop.style.top=''; if(hit) pourScoop(); };
+      scoop.addEventListener('pointermove', move); scoop.addEventListener('pointerup', up);
+    });
+    const washStage=$('wash-stage');
+    washStage.addEventListener('pointerdown',(e)=>{ if(e.target.closest('button')) return; washStage.setPointerCapture(e.pointerId); washPointer(e,'down'); });
+    washStage.addEventListener('pointermove',(e)=>washPointer(e,'move'));
+    washStage.addEventListener('pointerup',(e)=>washPointer(e,'up'));
+    washStage.addEventListener('pointercancel',(e)=>washPointer(e,'up'));
+    $('wrap-legs').addEventListener('pointerdown', onLegDown);
+    $('wrap-legs').addEventListener('pointermove', onLegMove);
+    $('wrap-legs').addEventListener('pointerup', onLegUp);
+    $('wrap-legs').addEventListener('pointercancel', onLegUp);
+    bindField('arena-field'); bindField('chase-field');
+    const joy=$('joystick'), knob=$('joy-knob');
+    function moveJoy(e){ const r=joy.getBoundingClientRect(); const cx=r.left+r.width/2, cy=r.top+r.height/2; let x=e.clientX-cx, y=e.clientY-cy; const max=r.width/2-10; const m=Math.hypot(x,y)||1; const c=Math.min(max,m); input.joy.x=(x/m)*(c/max); input.joy.y=(y/m)*(c/max); knob.style.transform='translate('+(x/m*c)+'px,'+(y/m*c)+'px)'; }
+    joy.addEventListener('pointerdown',(e)=>{ e.stopPropagation(); input.joy.active=true; input.joy.id=e.pointerId; joy.setPointerCapture(e.pointerId); moveJoy(e); });
+    joy.addEventListener('pointermove',(e)=>{ if(input.joy.active && e.pointerId===input.joy.id) moveJoy(e); });
+    const endJoy=(e)=>{ if(input.joy.id!=null && e.pointerId!==input.joy.id) return; input.joy.active=false; input.joy.x=0; input.joy.y=0; input.joy.id=null; knob.style.transform='translate(0px,0px)'; };
+    joy.addEventListener('pointerup', endJoy); joy.addEventListener('pointercancel', endJoy);
+    window.addEventListener('keydown',(e)=>{ input.keys.add(e.key.toLowerCase()); if(['arrowup','arrowdown','arrowleft','arrowright'].includes(e.key.toLowerCase()) && (arena.running||chase.running)) e.preventDefault(); if(e.key==='Escape' && modalOpen) closeModal('stay'); });
+    window.addEventListener('keyup',(e)=>input.keys.delete(e.key.toLowerCase()));
+    let hold=0; $('day-btn').addEventListener('pointerdown',()=>{ hold=setTimeout(openDev,650); });
+    $('day-btn').addEventListener('pointerup',()=>clearTimeout(hold));
+    $('day-btn').addEventListener('pointerleave',()=>clearTimeout(hold));
+    $('player-lamb').addEventListener('pointerdown',()=>{ if(!$('screen-barn').classList.contains('active')) return; SFX.baa(420); triggerHappy($('player-lamb').querySelector('.lamb')); });
+    $('neighbor-lamb').addEventListener('pointerdown',()=>{ if(!$('screen-barn').classList.contains('active')) return; SFX.baa(300); });
+  }
+  function boot(){
+    bind(); mountAll(); state=load(); if(state) soundPref=state.sound!==false; updateMute();
+    if(!state || state.phase==='setup') showSetup(); else resume();
+  }
+  boot();
+})();
+
+</script>
+</body>
+</html>
