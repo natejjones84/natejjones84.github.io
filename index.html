@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#3e6b45">
+<title>Nate's Games</title>
+<style>
+  :root {
+    --ink: #2a2118;
+    --cream: #fbf6ea;
+    --barn: #8e2f2f;
+    --leaf: #1f4a28;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    font-family: "Avenir Next", "Trebuchet MS", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(circle at 12% 0%, rgba(255, 255, 255, .35), transparent 28%),
+      linear-gradient(180deg, #8fbf62, #3e6b45 72%);
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+  main {
+    width: min(720px, 100%);
+    margin: 0 auto;
+    padding: max(28px, env(safe-area-inset-top)) 16px max(32px, env(safe-area-inset-bottom));
+  }
+  h1 {
+    margin: 0 0 8px;
+    font-family: Georgia, "Palatino Linotype", Palatino, serif;
+    font-size: clamp(40px, 10vw, 64px);
+    letter-spacing: -0.03em;
+    line-height: .95;
+    color: var(--cream);
+    text-shadow: 0 2px 0 rgba(42, 33, 24, .25);
+  }
+  .lede {
+    margin: 0 0 22px;
+    color: #f4ead4;
+    font-weight: 700;
+    font-size: 18px;
+  }
+  .games {
+    display: grid;
+    gap: 14px;
+  }
+  a.card {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    min-height: 148px;
+    padding: 22px 20px;
+    border-radius: 22px;
+    text-decoration: none;
+    color: var(--ink);
+    background: var(--cream);
+    border: 4px solid #6b3a22;
+    box-shadow: 0 8px 0 rgba(42, 33, 24, .18);
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  a.card:active {
+    transform: translateY(3px);
+    box-shadow: 0 4px 0 rgba(42, 33, 24, .18);
+  }
+  a.card:focus-visible {
+    outline: 3px solid #fff;
+    outline-offset: 3px;
+  }
+  a.card strong {
+    font-size: clamp(26px, 6vw, 34px);
+    line-height: 1.05;
+  }
+  a.card span {
+    font-size: 17px;
+    line-height: 1.35;
+    color: #5c4630;
+  }
+  a.show { border-color: var(--barn); }
+  a.show strong { color: var(--barn); }
+  a.frenzy { border-color: var(--leaf); }
+  a.frenzy strong { color: var(--leaf); }
+  @media (min-width: 720px) {
+    a.card { min-height: 180px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Nate's Games</h1>
+  <p class="lede">Two games. Tap one to play.</p>
+  <nav class="games" aria-label="Games">
+    <a class="card show" href="./show-lamb/">
+      <strong>Show Lamb</strong>
+      <span>raise a show lamb for 300 days</span>
+    </a>
+    <a class="card frenzy" href="./furball-frenzy/">
+      <strong>Furball Frenzy</strong>
+      <span>last critter standing battle royale</span>
+    </a>
+  </nav>
+</main>
+</body>
+</html>
