@@ -11,6 +11,7 @@
     --cream: #fbf6ea;
     --barn: #8e2f2f;
     --leaf: #1f4a28;
+    --pot: #6b4423;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; min-height: 100%; }
@@ -84,6 +85,8 @@
   a.show strong { color: var(--barn); }
   a.frenzy { border-color: var(--leaf); }
   a.frenzy strong { color: var(--leaf); }
+  a.plants { border-color: var(--pot); }
+  a.plants strong { color: var(--pot); }
   @media (min-width: 720px) {
     a.card { min-height: 180px; }
   }
@@ -92,7 +95,7 @@
 <body>
 <main>
   <h1>Nate's Games</h1>
-  <p class="lede">Two games. Tap one to play.</p>
+  <p class="lede">Three games. Tap one to play.</p>
   <nav class="games" aria-label="Games">
     <a class="card show" href="./show-lamb/">
       <strong>Show Lamb</strong>
@@ -100,7 +103,11 @@
     </a>
     <a class="card frenzy" href="./furball-frenzy/">
       <strong>Furball Frenzy</strong>
-      <span>last critter standing battle royale</span>
+      <span>last critter standing battle royale, now with a capybara, grenades, and play with a friend</span>
+    </a>
+    <a class="card plants" href="./plant-wall/">
+      <strong>Plant Wall Simulator</strong>
+      <span>grow a wall of 50 houseplants and keep the cat away</span>
     </a>
   </nav>
 </main>
