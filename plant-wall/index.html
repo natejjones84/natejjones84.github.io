@@ -39,6 +39,8 @@ i[data-ic]{display:inline-flex;align-items:center;justify-content:center;font-st
 .ib:active,.tb:active,.btn:active{transform:scale(.94)}
 /* Toolbar */
 #toolbar{position:fixed;left:0;right:0;bottom:0;z-index:12;display:flex;justify-content:center;gap:4px;padding:6px 6px calc(env(safe-area-inset-bottom) + 6px);background:linear-gradient(rgba(251,246,236,.9),rgba(251,246,236,.98));box-shadow:0 -2px 14px rgba(0,0,0,.15)}
+.ib.vw{width:auto;padding:0 10px;gap:5px;display:flex;align-items:center;font-weight:800;font-size:13px;background:#e9f3df;color:#24412e}.ib.vw svg.i{width:19px;height:19px}@media (max-width:430px){.ib.vw span{display:none}.ib.vw{padding:0 9px}}
+.nslider{width:100%}.seg{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}.seg button{flex:1 1 30%;padding:8px 6px;border-radius:12px;background:#f1ebdf;font-weight:800;font-size:12.5px;min-height:40px}.seg button.on{background:#2f5d3a;color:#fff}
 .tb{flex:1;max-width:84px;height:62px;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;font-weight:800;color:#3c4a3e;touch-action:none;position:relative;transition:background .15s}
 .tb svg.i{width:27px;height:27px}
 .tb.sel{background:var(--green);color:#fff;box-shadow:0 3px 8px rgba(36,65,46,.35)}
@@ -185,6 +187,7 @@ html.js-ready #nojs{display:none}
   </div>
   <div class="hrow">
     <div class="pill day"><i id="sunIc" data-ic="sun"></i><span id="dayTxt">Day 1</span><span id="clock">8:00 AM</span></div>
+    <button class="ib vw" id="viewBtn" aria-label="Switch view"><i data-ic="sprout"></i><span>Nursery</span></button>
     <button class="ib" id="pauseBtn" aria-label="Pause"><i data-ic="pause"></i></button>
     <button class="ib" id="speedBtn" aria-label="Speed">1x</button>
     <button class="ib" id="muteBtn" aria-label="Sound"><i data-ic="sound"></i></button>
@@ -196,6 +199,7 @@ html.js-ready #nojs{display:none}
   <button class="tb" data-tool="water" id="tb-water"><i data-ic="water"></i>Water</button>
   <button class="tb" data-tool="feed" id="tb-feed"><i data-ic="feed"></i>Feed<span class="badge" id="fertBadge">5</span></button>
   <button class="tb" data-tool="spray" id="tb-spray"><i data-ic="spray"></i>Spray</button>
+  <button class="tb" data-tool="trim" id="tb-trim"><i data-ic="scissors"></i>Trim</button>
   <button class="tb" data-tool="treat" id="tb-treat"><i data-ic="med"></i>Treat</button>
   <button class="tb" data-open="light" id="tb-light"><i data-ic="sun"></i>Light</button>
   <button class="tb" data-open="shop" id="tb-shop"><i data-ic="cart"></i>Shop</button>
@@ -318,8 +322,8 @@ const TREAT = {
 };
 const SUPPLIES = {
   fert:    { n: 'Fertilizer (5 feeds)', pr: 12, ic: 'feed', d: 'Balanced liquid plant food. Each feed adds nutrients.' },
-  squeaky: { n: 'Squeaky mouse toy',    pr: 8,  ic: 'mouse', d: 'Toss it to distract the cat. Works instantly, once.' },
-  citrus:  { n: 'Citrus cat deterrent', pr: 20, ic: 'spray', d: 'Cats hate citrus. Keeps the cat away for 3 days.' }
+  squeaky: { n: 'Squeaky mouse toy',    pr: 8,  ic: 'mouse', d: 'Toss it to distract Agent Scarn. Works instantly, once.' },
+  citrus:  { n: 'Citrus cat deterrent', pr: 20, ic: 'spray', d: 'Cats hate citrus. Keeps Agent Scarn away for 3 days.' }
 };
 const DECOR = {
   pot:   { n: 'Pot color', opts: [
@@ -349,10 +353,19 @@ const SLOTS = [
   { x: 785, y: 520 }, { x: 420, y: 328 }, { x: 610, y: 318 }, { x: 222, y: 692 }, { x: 765, y: 704 }
 ];
 const SLOT_GT = [0, 0, 0, 0, 0, 30, 100, 200, 330, 480];
-const CAT_NAME = 'Pickles';
+const CAT_NAME = 'Agent Scarn';
 
 /* ================= ICONS ================= */
+const PROP_LEAF = ['snake', 'aloe', 'jade', 'haworthia', 'echeveria', 'kerrii', 'peperomia', 'watermelon', 'violet', 'begonia', 'xmascactus'];
+const PROP_DIV = ['spider', 'zz', 'peacelily', 'boston', 'birdsnest', 'castiron', 'calathea', 'maranta', 'aglaonema', 'aglapink', 'oxalis', 'bromeliad', 'pilea', 'alocasia', 'parlor', 'bamboo'];
+const PROP_SOIL = ['fiddle', 'rubber', 'marginata', 'schefflera', 'croton', 'ponytail', 'polkadot', 'fittonia', 'anthurium'];
+function propMethod(id) { return PROP_LEAF.includes(id) ? 'leaf' : PROP_DIV.includes(id) ? 'division' : PROP_SOIL.includes(id) ? 'soil' : 'water'; }
+const PROP_TXT = { water: 'Cutting in a water jar', leaf: 'Leaf cutting in gritty soil', division: 'Division / baby plant', soil: 'Stem cutting in soil' };
+function waterRate(sp) { return clamp(55 * Math.pow(7 / sp.wd, .8), 20, 78); }
 const ICONS = {
+  scissors: '<circle cx="6" cy="17" r="3"/><circle cx="17" cy="17" r="3"/><path d="M8 15L19 4M15 15L5 4"/>',
+  sprout: '<path d="M12 21v-8"/><path d="M12 13c0-4-3-6-7-6 0 4 3 6 7 6zM12 11c0-4 3-7 7-7 0 4-3 7-7 7z" fill="currentColor" fill-opacity=".25"/><path d="M7 21h10"/>',
+  wall: '<path d="M4 20V10a8 8 0 0116 0v10z" fill="currentColor" fill-opacity=".2"/><path d="M9 14v3M15 12v3"/>',
   coin: '<circle cx="12" cy="12" r="9" fill="#f2b632" stroke="#a87410"/><circle cx="12" cy="12" r="5.5" stroke="#a87410" stroke-width="1.6"/><path d="M12 9v6" stroke="#a87410"/>',
   leaf: '<path d="M5 19C5 10 11 5 20 4c0 9-5 15-14 15z" fill="currentColor" fill-opacity=".25"/><path d="M5 19l8-8"/>',
   sun: '<circle cx="12" cy="12" r="4.2" fill="currentColor" fill-opacity=".25"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5.3 5.3l1.7 1.7M17 17l1.7 1.7M5.3 18.7L7 17M17 7l1.7-1.7"/>',
@@ -418,7 +431,7 @@ function newPlant(sp, slot, g) {
 }
 function newState(name, starters) {
   S = {
-    v: 1, name: name || 'My', coins: 100, gt: 0, day: 8 / 24, speed: 1, paused: false, unlocked: 5, plants: [], nursery: [],
+    v: 1, name: name || 'My', coins: 100, gt: 0, day: 8 / 24, speed: 1, paused: false, unlocked: 5, plants: [], nursery: [], nurseCap: 6, nLight: 60, view: 'wall',
     inv: { fert: 5, neem: 1, ladybugs: 1, squeaky: 1 }, light: { blinds: 70, grow: 0, color: 'full' },
     decor: { pot: 'black', chain: 'iron', drape: 'classic', wood: 'natural', lights: 'off', owned: { 'pot:black': 1, 'chain:iron': 1, 'chain:none': 1, 'drape:classic': 1, 'wood:natural': 1, 'lights:off': 1 } },
     catNext: 1.15, catAway: 0, streak: 0, stats: { scared: 0, cured: 0, grown: 0, died: 0, bought: 0, earned: 0, damaged: 0 },
@@ -515,7 +528,7 @@ function lightMatch(sp, L) {
 }
 function plantPos(p) { const s = SLOTS[p.slot]; return { x: s.x + (p._ox || 0), y: s.y + (p._oy || 0) }; }
 function plantCenter(p) { const q = plantPos(p); const sz = plantSize(p); return { x: q.x, y: q.y - 40 * sz }; }
-function plantSize(p) { return .5 + .68 * Math.min(1, p.g); }
+function plantSize(p) { return .5 + .68 * Math.min(1, p.gv != null ? p.gv : p.g); }
 
 function addCoins(n, x, y, silent) {
   n = Math.round(n); if (!n) return;
@@ -544,7 +557,7 @@ function nutFactor(n) { return n < 20 ? .45 + .55 * n / 20 : n > 112 ? .6 : 1; }
 function simPlant(p, dt) {
   const sp = SP[p.sp]; const L = plantLight(p); const lm = lightMatch(sp, L);
   p.age += dt;
-  p.w = Math.max(0, p.w - 90 / sp.wd * (.75 + .5 * L / 100) * dt * (p.w > 100 ? 1.25 : 1));
+  p.w = Math.max(0, p.w - waterRate(sp) * (.8 + .4 * L / 100) * dt * (p.w > 100 ? 1.3 : 1));
   const wf = waterFactor(sp, p.w), nf = nutFactor(p.n);
   const sev = p.ail ? p.ail.sev : 0;
   const gfac = wf * nf * (.2 + .8 * lm.m) * (.3 + .7 * p.h / 100) * (p.ail ? 1 - .6 * sev : 1);
@@ -553,15 +566,18 @@ function simPlant(p, dt) {
   if (p.imm > 0) p.imm -= dt;
   if (p.mist > 0) p.mist -= dt;
   // growth
-  let dg = .032 * sp.gr * gfac * dt; if (p.g > 1) dg *= .25;
-  p.g = Math.min(1.1, p.g + dg);
+  let dg = .032 * sp.gr * gfac * dt * (1 + .12 * (p.bush || 0)); if (p.g > 1) dg *= .35;
+  p.g = Math.min(1.35, p.g + dg);
+  if (sp.f === 'trail' && p.vl != null && p.vl < 1) p.vl = Math.min(1, p.vl + .07 * gfac * dt);
+  if (p.pcd > 0) p.pcd -= dt;
+  const gst = Math.floor(p.g / GSTEP); if (p.gs == null) p.gs = gst; else if (gst > p.gs) { p.gs = gst; growPop(p); }
   if (p.dmg > 0 && p.h > 40) p.dmg = Math.max(0, p.dmg - dt * (.6 + 2 * gfac));
   // health
   let dh = 0; const [a] = sp.band;
   const dryLim = Math.max(4, a - 6);
   let dryS = 0;
-  if (p.w < dryLim) { dryS = (dryLim - p.w) / dryLim; dh -= 34 * dryS; }
-  if (p.w > sp.soggy) dh -= 6 + 10 * Math.min(1, p.soggy);
+  if (p.w < dryLim) { dryS = (dryLim - p.w) / dryLim; dh -= 28 * dryS; }
+  if (p.w > sp.soggy) dh -= 3 + 7 * Math.min(1, p.soggy);
   if (p.n > 112) dh -= 6 + (p.n - 112) * .4;
   if (p.n < 6) dh -= 3;
   if (lm.over > 6) dh -= (lm.over - 6) * .7;
@@ -576,7 +592,7 @@ function simPlant(p, dt) {
     syncPests(p);
     if (AILS[p.ail.t].k === 'pest' && p.ail.sev > .7 && Math.random() < .3 * dt) spreadFrom(p);
   } else if (p.imm <= 0) {
-    if (p.soggy > .8 && Math.random() < (1 + p.soggy) * dt) startAil(p, 'root_rot');
+    if (p.soggy > 1 && Math.random() < (.8 + p.soggy) * dt) startAil(p, 'root_rot');
     else if (S.day > 2.6) {
       const stress = clamp(1 - p.h / 100 + dryS + (p.w > sp.soggy ? .5 : 0) + (1 - lm.m) * .6, 0, 2);
       if (Math.random() < dt * .045 * (.4 + sp.ps) * (1 + 2.5 * stress)) startAil(p, chooseAil(p, L));
@@ -643,6 +659,7 @@ function simStep(dt) {
   S.day += dt;
   if (S.catAway > 0) S.catAway -= dt;
   S.plants.forEach(p => { if (!p._dying) simPlant(p, dt); });
+  simNursery(dt);
   if (Math.floor(S.day) > before) dailyTick();
   if (!T.cat && S.day >= S.catNext && !T.modalOpen) {
     if (S.catAway > 0 || !S.plants.some(p => !p._dying)) S.catNext = S.day + rand(.6, 1.2);
@@ -671,7 +688,7 @@ function dailyTick() {
 function doWater(p) {
   if (!p || p._dying) return;
   queueAction({ type: 'water', p, dur: 1.3, done() {
-    p.w = Math.min(150, p.w + 40); p._bounce = 1; T.dirty = true;
+    p.w = Math.min(150, p.w + 50); p._bounce = 1; T.dirty = true;
     const sp = SP[p.sp], c = plantCenter(p);
     if (p.w > sp.soggy) { fxText(c.x, c.y - 30, 'Too wet!', '#7fb6ff'); toast(sp.n + ' is waterlogged. Let it dry out or roots will rot.', 'warn'); }
     else fxText(c.x, c.y - 30, 'Watered', '#9fd3ff');
@@ -729,6 +746,7 @@ function queueAction(a) { a.t = 0; T.actions = T.actions.filter(b => b.p !== a.p
 /* ================= CAT ================= */
 function viewRight() { return T.view ? T.view.wx1 : 1000; }
 function spawnCat(forceSlot) {
+  if (S.view === 'nursery') { setView('wall'); toast(CAT_NAME + ' is on the move! Back to the wall.', 'warn'); }
   let alive = S.plants.filter(p => !p._dying);
   if (forceSlot != null && plantAt(forceSlot)) alive = [plantAt(forceSlot)];
   S.catNext = S.day + rand(1.6, 3.0);
@@ -1127,7 +1145,7 @@ function flower(ctx, type, x, y, s, ang) {
 
 function drawPlant(ctx, p, x, y, opts) {
   const sp = SP[p.sp]; opts = opts || {};
-  const g = Math.min(1, p.g), t = T.t, seed = p.seed;
+  const g = Math.min(1.3, p.gv != null ? p.gv : p.g), t = T.t, seed = p.seed;
   let sz = plantSize(p);
   if (p._bounce > 0) sz *= 1 + Math.sin(p._bounce * 14) * .05 * p._bounce;
   if (p._shake > 0) x += Math.sin(t * 50) * 7 * p._shake;
@@ -1176,8 +1194,9 @@ function drawPlant(ctx, p, x, y, opts) {
     flowersBack.forEach((fb, k) => { if (sp.fl === 'violet') flower(ctx, 'violet', x + (hash(seed, 80 + k) - .5) * 40 * sz, y - (14 + hash(seed, 90 + k) * 16) * sz, .9 * sz + .3, 0); else flower(ctx, sp.fl, fb.ex, fb.ey, (sp.fl === 'oxalis' ? .8 : 1.05) * sz + .2, fb.a * .6); });
   } else if (f === 'trail') {
     // vines
-    const nv = Math.max(1, Math.round(sp.nv * (.35 + .65 * g)));
-    const vlen = sp.vm * clamp((g - .1) / .9, 0, 1.12) * (1 - Math.min(.5, dmg * .07));
+    const nv = Math.max(1, Math.round(sp.nv * (.35 + .65 * g)) + (p.bush || 0));
+    const vfull = sp.vm * clamp((g - .1) / .9, 0, 1.12) * (1 - Math.min(.5, dmg * .07)); p._vfull = vfull;
+    const vlen = vfull * (p.vl != null ? p.vl : 1), arr = opts.thumb ? 'down' : (p.va || 'down');
     const small = sp.lf === 'pearl' || sp.lf === 'turtle';
     const stepL = small ? 9 : 17;
     for (let j = 0; j < nv; j++) {
@@ -1188,7 +1207,8 @@ function drawPlant(ctx, p, x, y, opts) {
         const s = k / N * len;
         let px, py;
         if (s < 26) { px = sx + side * s * .55; py = y - Math.sin(s / 26 * Math.PI) * 7 + s * .25; }
-        else { const ss = s - 26; px = sx + side * (14.3 + 8 * hash(seed, j + 30) * Math.min(1, ss / 60)) + Math.sin(t * .9 + seed + j * 1.3 + s * .012) * Math.pow(ss / 100, 1.25) * 6 * (opts.still ? 0 : 1) + Math.sin(s * .045 + j * 2) * 3; py = y + 6.5 + ss; }
+        else { const ss = s - 26; px = sx + side * (14.3 + 8 * hash(seed, j + 30) * Math.min(1, ss / 60)) + Math.sin(t * .9 + seed + j * 1.3 + s * .012) * Math.pow(ss / 100, 1.25) * 6 * (opts.still ? 0 : 1) + Math.sin(s * .045 + j * 2) * 3; py = y + 6.5 + ss;
+          if (arr !== 'down') { const o = vineShape(arr, ss, side, j, seed); px += o[0]; py += o[1]; } }
         pts.push(px, py);
       }
       stemPath(ctx, pts, stemCol, small ? 1.3 : 1.7);
@@ -1617,7 +1637,7 @@ function drawCat(c, cat) {
   setVM(c);
   const k = 1.4, face = cat.face, shake = cat.shake ? Math.sin(T.t * 60) * 4 * cat.shake : 0;
   const scared = cat.scared && (cat.phase === 'leave' || cat.phase === 'leapDown');
-  const O = '#ec944a', D = '#c8692a', Wt = '#fff6ea';
+  const O = '#bfc2c6', D = '#3a3c41', Wt = '#f1f2f4';
   c.save(); c.translate(cat.x + shake, cat.y); c.scale(face * k, k);
   const tail = (bx, by, up) => { const w = Math.sin(T.t * (scared ? 14 : 3)) * 14; c.strokeStyle = O; c.lineWidth = scared ? 15 : 11; c.lineCap = 'round'; c.beginPath(); c.moveTo(bx, by); c.bezierCurveTo(bx - 30, by - 10, bx - 40 + w, by - up * .6, bx - 22 + w * 1.4, by - up); c.stroke(); c.strokeStyle = D; c.lineWidth = 4; c.setLineDash([5, 7]); c.stroke(); c.setLineDash([]); };
   const head = (hx, hy, ang) => {
@@ -1625,7 +1645,7 @@ function drawCat(c, cat) {
     c.fillStyle = O; c.beginPath(); c.moveTo(-18, -12); c.lineTo(-20, scared ? -18 : -36); c.lineTo(-5, -20); c.closePath(); c.moveTo(18, -12); c.lineTo(20, scared ? -18 : -36); c.lineTo(5, -20); c.closePath(); c.fill();
     c.fillStyle = '#f7b9a8'; c.beginPath(); c.moveTo(-15, -15); c.lineTo(-17, scared ? -16 : -30); c.lineTo(-8, -19); c.closePath(); c.moveTo(15, -15); c.lineTo(17, scared ? -16 : -30); c.lineTo(8, -19); c.closePath(); c.fill();
     c.fillStyle = O; c.beginPath(); c.ellipse(0, 0, 24, 21, 0, 0, TAU); c.fill();
-    c.strokeStyle = D; c.lineWidth = 3; c.beginPath(); c.moveTo(-6, -19); c.lineTo(-4, -11); c.moveTo(0, -21); c.lineTo(0, -12); c.moveTo(6, -19); c.lineTo(4, -11); c.stroke();
+    c.strokeStyle = D; c.lineWidth = 2.6; c.lineJoin = 'round'; c.beginPath(); c.moveTo(-9, -10); c.lineTo(-7, -19); c.lineTo(0, -12); c.lineTo(7, -19); c.lineTo(9, -10); c.moveTo(-21, -2); c.lineTo(-15, -3); c.moveTo(21, -2); c.lineTo(15, -3); c.moveTo(-22, 4); c.lineTo(-16, 3); c.moveTo(22, 4); c.lineTo(16, 3); c.stroke();
     c.fillStyle = Wt; c.beginPath(); c.ellipse(0, 9, 13, 9, 0, 0, TAU); c.fill();
     // eyes
     const ex = 9; c.fillStyle = '#9be04a'; c.beginPath(); c.ellipse(-ex, -2, 5.6, scared ? 6.6 : 6, 0, 0, TAU); c.ellipse(ex, -2, 5.6, scared ? 6.6 : 6, 0, 0, TAU); c.fill();
@@ -1636,6 +1656,7 @@ function drawCat(c, cat) {
     if (scared || cat.phase === 'attack') { c.fillStyle = '#c33'; c.beginPath(); c.ellipse(0, 13, 4, 2.6, 0, 0, Math.PI); c.fill(); }
     c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = 1; c.beginPath(); for (const s of [-1, 1]) { c.moveTo(s * 10, 7); c.lineTo(s * 30, 3); c.moveTo(s * 10, 9); c.lineTo(s * 30, 11); } c.stroke();
     c.fillStyle = 'rgba(255,120,120,.3)'; c.beginPath(); c.ellipse(-15, 6, 4, 2.5, 0, 0, TAU); c.ellipse(15, 6, 4, 2.5, 0, 0, TAU); c.fill();
+    if (cat.phase === 'peek' || cat.phase === 'walk') { c.fillStyle = '#111'; c.beginPath(); c.roundRect(-16, -8, 13, 9, 3); c.roundRect(3, -8, 13, 9, 3); c.fill(); c.strokeStyle = '#111'; c.lineWidth = 2; c.beginPath(); c.moveTo(-3, -5); c.lineTo(3, -5); c.moveTo(-16, -5); c.lineTo(-23, -7); c.moveTo(16, -5); c.lineTo(23, -7); c.stroke(); c.fillStyle = 'rgba(255,255,255,.55)'; c.fillRect(-13, -6, 4, 2); c.fillRect(6, -6, 4, 2); }
     c.restore();
   };
   if (cat.phase === 'attack') {
@@ -1879,7 +1900,7 @@ function thumbFor(spId) {
   return (THUMBS[spId] = c.toDataURL());
 }
 function diffTxt(d) { return ['', 'Easy', 'Medium', 'Expert'][d]; }
-function waterTxt(sp) { return sp.wd >= 12 ? 'Rarely (let soil dry fully)' : sp.wd >= 8 ? 'Every ~' + sp.wd + ' days, dry halfway' : sp.wd >= 5 ? 'Every ~' + sp.wd + ' days' : 'Often, keep lightly moist'; }
+function waterTxt(sp) { const d = (sp.band[1] - sp.band[0] + 10) / waterRate(sp); return d >= 2.2 ? 'Every ~' + Math.round(d) + ' days, let it dry' : d >= 1.4 ? 'About every other day' : d >= .9 ? 'About once a day' : 'Thirsty: daily, sometimes twice'; }
 function fertTxt(sp) { return ['Light feeder', 'Moderate feeder', 'Hungry feeder'][sp.fz]; }
 function growTxt(sp) { return sp.gr >= 1.2 ? 'Fast' : sp.gr >= .7 ? 'Medium' : 'Slow'; }
 function lightTxt(sp) { return LIGHTS[sp.lt].n + ' (' + sp.lr[0] + '\u2013' + sp.lr[1] + ')'; }
@@ -1929,12 +1950,13 @@ const UI = {
       const tool = b.dataset.tool;
       if (tool === 'treat' && T.sel) { UI.setTool('hand'); return UI.treatSheet(T.sel); }
       UI.setTool(tool);
-      const hints = { water: 'Tap a plant to water it (or drag the can onto it).', feed: 'Tap a plant to feed it. You have ' + (S.inv.fert || 0) + ' feeds.', spray: 'Spray the cat to shoo it, or mist humidity-loving plants.', treat: 'Tap a sick plant to treat it.', hand: 'Tap a plant for details. Drag pots to rearrange.' };
+      const hints = { water: 'Tap a plant to water it (or drag the can onto it).', feed: 'Tap a plant to feed it. You have ' + (S.inv.fert || 0) + ' feeds.', spray: 'Spray the cat to shoo it, or mist humidity-loving plants.', trim: 'Tap a trailing plant\u2019s vines where you want to cut them.', treat: 'Tap a sick plant to treat it.', hand: 'Tap a plant for details. Drag pots to rearrange.' };
       toast(hints[tool], '');
     });
   },
   setTool(t) { T.tool = t; document.querySelectorAll('#toolbar .tb[data-tool]').forEach(b => b.classList.toggle('sel', b.dataset.tool === t)); },
   applyTool(tool, p) {
+    if (tool === 'trim') { trimAtTool(p); return; }
     if (tool === 'water') doWater(p); else if (tool === 'feed') doFeed(p); else if (tool === 'spray') doMist(p);
     else if (tool === 'treat') UI.treatSheet(p); else UI.plantCard(p);
     if (T.sheetKind === 'plant' && T.sel === p) setTimeout(() => UI.refreshCard(true), 1400);
@@ -1972,8 +1994,9 @@ const UI = {
       <div id="pcAil"></div>
       <div class="acts"><button class="btn" id="pcWater">${ic('water')}Water</button><button class="btn" id="pcFeed">${ic('feed')}Feed</button><button class="btn alt" id="pcMist">${ic('spray')}Mist</button><button class="btn gold" id="pcTreat">${ic('med')}Treat</button></div>
       <div class="needs"><div><b>Light</b>${lightTxt(sp)}</div><div><b>Water</b>${waterTxt(sp)}</div><div><b>Food</b>${fertTxt(sp)}</div><div><b>Growth</b>${growTxt(sp)}${sp.f === 'trail' ? ', trailing vines' : ''}</div><div><b>Watch for</b>${pestTxt(sp)}</div><div><b>Cats</b>${sp.tx ? 'Toxic if chewed' : 'Non-toxic'}</div></div>
+      ${extraCardHtml(p)}
       <p style="font-size:13px;margin:6px 0;opacity:.8">${esc(sp.d)}</p>
-      <div class="acts"><button class="btn alt sm" id="pcShelf">${ic('shelf')}Move to nursery shelf</button></div>`;
+      <div class="acts"><button class="btn alt sm" id="pcShelf">${ic('shelf')}Move to nursery</button></div>`;
     UI.openSheet('plant', html);
     $('pcX').onclick = () => UI.closeSheet();
     $('pcWater').onclick = () => { AU.init(); doWater(p); setTimeout(() => UI.refreshCard(true), 1400); };
@@ -1981,6 +2004,7 @@ const UI = {
     $('pcMist').onclick = () => { AU.init(); doMist(p); };
     $('pcTreat').onclick = () => UI.treatSheet(p);
     $('pcShelf').onclick = () => UI.toShelf(p);
+    bindExtraCard(p);
     UI._sig = null; UI.refreshCard(true);
   },
   refreshCard(force) {
@@ -2009,8 +2033,8 @@ const UI = {
     }
   },
   toShelf(p) {
-    if (S.nursery.length >= 8) { toast('Your nursery shelf is full (8).', 'bad'); return; }
-    S.nursery.push({ sp: p.sp, g: p.g, h: p.h, w: p.w, n: p.n, seed: p.seed, age: p.age, stage: p.stage, ail: p.ail ? { t: p.ail.t, sev: p.ail.sev, seen: true } : null, dmg: p.dmg });
+    if (S.nursery.length >= S.nurseCap) { toast('Your nursery is full (' + S.nurseCap + ' spots). Sell or hang something, or add spots in the Nursery.', 'bad'); return; }
+    S.nursery.push({ id: S.nextId++, kind: 'plant', sp: p.sp, bush: p.bush || 0, vl: p.vl, va: p.va, g: p.g, h: p.h, w: p.w, n: p.n, seed: p.seed, age: p.age, stage: p.stage, ail: p.ail ? { t: p.ail.t, sev: p.ail.sev, seen: true } : null, dmg: p.dmg });
     S.plants = S.plants.filter(q => q !== p); UI.closeSheet(); AU.click(); T.dirty = true;
     toast(SP[p.sp].n + ' moved to your nursery shelf. Tap an empty spot to hang it again.', '');
   },
@@ -2030,14 +2054,14 @@ const UI = {
   placeSheet(slot) {
     const L = slotLight(slot);
     let html = `<div class="shead"><div><h2>Empty spot</h2><div class="sci">Light here: ${Math.round(L)} (${lightCat(L)})</div></div><button class="x" id="plX">${ic('x')}</button></div>`;
-    if (S.nursery.length) {
-      html += '<p style="margin:4px 0 8px;font-weight:700">Hang a plant from your nursery shelf:</p><div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(110px,1fr))">' + S.nursery.map((n, i) => { const sp = SP[n.sp], m = lightMatch(sp, L); return `<button class="it" data-nurse="${i}"><img src="${thumbFor(n.sp)}" alt=""><div class="nm">${sp.n}</div><div class="ds">${STAGES[stageOf(n.g)].n} \u00b7 ${m.status === 'good' ? 'Light OK' : m.status === 'dark' ? 'Too dark here' : 'Too bright here'}</div></button>`; }).join('') + '</div>';
-    } else html += '<p>Your nursery shelf is empty. Buy a new plant to fill this spot.</p>';
+    if (S.nursery.some(n => n.kind === 'plant')) {
+      html += '<p style="margin:4px 0 8px;font-weight:700">Hang a plant from your Nursery:</p><div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(110px,1fr))">' + S.nursery.map((n, i) => { if (n.kind !== 'plant') return ''; const sp = SP[n.sp], m = lightMatch(sp, L); return `<button class="it" data-nurse="${i}"><img src="${thumbFor(n.sp)}" alt=""><div class="nm">${sp.n}</div><div class="ds">${STAGES[stageOf(n.g)].n} \u00b7 ${m.status === 'good' ? 'Light OK' : m.status === 'dark' ? 'Too dark here' : 'Too bright here'}</div></button>`; }).join('') + '</div>';
+    } else html += '<p>No potted plants waiting in your Nursery. Buy a plant, or propagate one.</p>';
     html += `<div class="acts"><button class="btn gold" id="plShop">${ic('cart')}Buy a plant for this spot</button></div>`;
     UI.openSheet('place', html);
     $('plX').onclick = () => UI.closeSheet();
     $('plShop').onclick = () => { T.pendingSlot = slot; UI.shop('plants'); };
-    $('sheetIn').querySelectorAll('[data-nurse]').forEach(b => b.onclick = () => { const n = S.nursery.splice(+b.dataset.nurse, 1)[0]; placeFromData(n, slot); UI.closeSheet(); });
+    $('sheetIn').querySelectorAll('[data-nurse]').forEach(b => b.onclick = () => { const n = S.nursery.splice(+b.dataset.nurse, 1)[0]; const p = placeFromData(n, slot); ['bush', 'vl', 'va'].forEach(k => { if (n[k] != null) p[k] = n[k]; }); UI.closeSheet(); });
   },
   lightSheet() {
     T.sel = null; T.lightMap = true;
@@ -2156,10 +2180,11 @@ const UI = {
   tutorial(i) {
     const steps = [
       ['Welcome to your plant wall!', 'Your starter plants hang in black pots on the wood arch, just like a real plant wall. Keep them alive and growing to earn coins and unlock up to <b>10 spots</b>.'],
-      ['Water & feed', 'Pick <b>Water</b> or <b>Feed</b> in the toolbar, then tap a plant. You can also drag the tool straight onto a plant. Bubbles warn you when a plant is thirsty. Overwatering causes root rot, and too much fertilizer burns.'],
+      ['Water & feed', 'Pick <b>Water</b> or <b>Feed</b> in the toolbar, then tap a plant. You can also drag the tool straight onto a plant. Most plants want water <b>about once a day</b>; succulents, snake plants and ZZs only every few days. A blue drop bubble means thirsty. Keeping soil soggy for a long time causes root rot, and too much fertilizer burns.'],
       ['Arrange & light', 'Drag any pot to another spot to move or swap it. The <b>window is on the left</b>, so spots near it are brighter. Open <b>Light</b> to set the blinds and grow light. Each plant has its own light needs.'],
       ['Watch out for ' + CAT_NAME + '!', 'Every so often the cat sneaks in and swats at your plants. When you see the <b>!</b>, tap the cat a few times, use the <b>Spray</b> bottle, or toss a squeaky toy.'],
       ['Bugs & sickness', 'A red <b>!</b> means trouble. Tap the plant to diagnose it, then tap <b>Treat</b>. The Shop sells medicines like neem oil and fungicide, plus <b>bug allies</b> like ladybugs that eat pests. The wrong remedy gets wasted.'],
+      ['Trim, propagate & nursery', 'Use <b>Trim</b> on trailing vines to shorten them (it makes them bushier and gives you cuttings). The plant card lets you <b>arrange vines</b> and <b>propagate</b>. Cuttings root in the <b>Nursery</b> (sprout button at the top), then pot them, hang them, or sell them.'],
       ['Grow your collection', 'Days pass about once a minute (use 2x/4x to speed up). Healthy plants earn coins every day, and growth milestones earn <b>Green Thumb</b> points that unlock new spots. Have fun!']
     ];
     if (i >= steps.length) { $('tut').classList.add('hidden'); T.modalOpen = false; S.tut = true; T.dirty = true; return; }
@@ -2222,7 +2247,8 @@ function buy(code) {
     const fs = freeSlots();
     if (T.pendingSlot != null && fs.includes(T.pendingSlot)) { const sl = T.pendingSlot; T.pendingSlot = null; UI.closeModal(); UI.closeSheet(); placeFromData(data, sl); }
     else if (fs.length) { UI.closeModal(); UI.closeSheet(); T.placing = data; UI.banner(); toast('Tap a glowing spot to hang your new ' + label + '.', ''); }
-    else { S.nursery.push(data); toast(label + ' is on your nursery shelf. Free up or unlock a spot to hang it.', ''); }
+    else if (S.nursery.length < S.nurseCap) { S.nursery.push(Object.assign({ id: S.nextId++, kind: 'plant' }, data)); toast(label + ' went to your Nursery. Free up or unlock a spot to hang it.', ''); }
+    else { S.coins += price; toast('No room on the wall or in the Nursery. Refunded.', 'bad'); }
   } else if (parts[0] === 'treat') { S.inv[parts[1]] = (S.inv[parts[1]] || 0) + 1; toast('Bought ' + label + '.', 'good'); }
   else if (parts[0] === 'sup') { const k = parts[1]; if (k === 'fert') S.inv.fert = (S.inv.fert || 0) + 5; else if (k === 'citrus') { S.catAway = 3; toast('Citrus spray applied. No cat for 3 days.', 'good'); } else S.inv[k] = (S.inv[k] || 0) + 1; if (k !== 'citrus') toast('Bought ' + label + '.', 'good'); }
   else if (parts[0] === 'decor') { S.decor.owned[parts[1] + ':' + parts[2]] = 1; S.decor[parts[1]] = parts[2]; panelKey = ''; toast(label + ' looks great!', 'good'); }
@@ -2309,6 +2335,288 @@ function bindCanvas() {
     else if ('1234567'.includes(e.key)) { const b = document.querySelectorAll('#toolbar .tb')[+e.key - 1]; b && b.click(); }
   });
 }
+/* ================= GROWTH STEPS, TRIM, VINES, PROPAGATION, NURSERY ================= */
+const GSTEP = .06;
+function growPop(p) {
+  p._grew = 1; p._bounce = Math.max(p._bounce || 0, .6);
+  if (S.view !== 'wall') return;
+  const c = plantCenter(p); fxBurst(c.x, c.y - 10, 'sparkle', 12); fxText(c.x, c.y - 70, 'grew!', '#d7f7a8');
+}
+const VINE_OPTS = [['down', 'Straight down'], ['left', 'Swept left'], ['right', 'Swept right'], ['split', 'Split'], ['drapeL', 'Drape left'], ['drapeR', 'Drape right']];
+function vineShape(arr, ss, side, j, seed) {
+  if (arr === 'left' || arr === 'right') { const d = arr === 'left' ? -1 : 1; return [d * (75 * (1 - Math.exp(-ss / 90)) + .1 * ss) - side * 10 * Math.min(1, ss / 60), 0]; }
+  if (arr === 'split') return [side * 62 * (1 - Math.exp(-ss / 80)), 0];
+  if (arr === 'drapeL' || arr === 'drapeR') {
+    const d = arr === 'drapeL' ? -1 : 1, D = 110 + 80 * hash(seed, j + 70), span = D * 1.15;
+    if (ss < span) { const u = ss / span; return [d * D * u - side * 14 * u, -ss + 4 + 24 * Math.sin(Math.PI * u) * (.7 + .3 * hash(seed, j + 71))]; }
+    return [d * D - side * 14, -span + 4];
+  }
+  return [0, 0];
+}
+function cutFx(p, fromL, toL) {
+  const pos = plantPos(p), sp = SP[p.sp];
+  for (let i = 0; i < 14; i++) { const yy = pos.y + 6 + rand(Math.max(20, fromL), Math.max(30, toL)); T.parts.push({ type: 'leaf', x: pos.x + rand(-45, 45), y: yy, vx: rand(-40, 40), vy: rand(-30, 30), life: rand(2, 3), max: 3, size: rand(8, 13), rot: rand(0, TAU), vr: rand(-4, 4), color: sp.c }); }
+  fxText(pos.x + 50, pos.y + fromL, 'snip!', '#fff');
+  T.snip = { x: pos.x + 40, y: pos.y + fromL, t: .6 };
+}
+function trimTo(p, nv) {
+  const sp = SP[p.sp];
+  if (sp.f !== 'trail') { toast(sp.n + ' isn\u2019t a trailing plant. Trim works on vines.', ''); return false; }
+  const cur = p.vl != null ? p.vl : 1; nv = clamp(nv, .15, 1);
+  if (cur - nv < .07) { toast('Tap lower on the vines to cut them shorter.', ''); return false; }
+  const full = p._vfull || sp.vm * clamp((p.g - .1) / .9, 0, 1.12);
+  cutFx(p, full * nv, full * cur);
+  p.vl = nv; p.bush = Math.min(4, (p.bush || 0) + 1); p._shake = .4; S.stats.trims = (S.stats.trims || 0) + 1; T.dirty = true;
+  AU.click(); AU.rustle();
+  let msg = 'Trimmed ' + sp.n + '. It will grow back bushier.';
+  if (cur - nv >= .15) { if (addProp(p.sp, 'trim')) msg += ' +1 cutting in your Nursery.'; else msg += ' (Nursery full, cutting composted.)'; }
+  toast(msg, 'good');
+  if (T.sheetKind === 'plant' && T.sel === p) UI.plantCard(p);
+  return true;
+}
+function trimAtTool(p) {
+  const sp = SP[p.sp]; if (sp.f !== 'trail') { toast(sp.n + ' isn\u2019t a trailing plant. Trim works on vines.', ''); return; }
+  const pos = plantPos(p), pt = T.lastPt || { x: pos.x, y: pos.y + 60 };
+  const full = p._vfull || 100, cur = p.vl != null ? p.vl : 1;
+  const L = (p.va || 'down').startsWith('drape') ? Math.hypot(pt.x - pos.x, pt.y - pos.y) : pt.y - pos.y - 6.5 + 26;
+  trimTo(p, L < 30 ? cur * .55 : Math.min(cur, L / full));
+}
+function addProp(spId, src) {
+  if (S.nursery.length >= S.nurseCap) return false;
+  const m = propMethod(spId);
+  S.nursery.push({ id: S.nextId++, kind: 'prop', sp: spId, method: m, root: m === 'division' ? .45 : 0, g: .08, w: m === 'water' ? 95 : 55, n: 50, h: 100, seed: Math.floor(Math.random() * 1e6) / 1000, age: 0, ail: null, imm: .5, src });
+  T.dirty = true; return true;
+}
+function propagate(p) {
+  const sp = SP[p.sp];
+  if (p.g < .2) return toast(sp.n + ' is too small. Wait until it is Young.', 'bad');
+  if (p.h < 60 || p.ail) return toast('Only take cuttings from a healthy plant.', 'bad');
+  if (p.pcd > 0) return toast(sp.n + ' needs ' + Math.ceil(p.pcd * 24) + ' more hours to recover first.', '');
+  if (!addProp(p.sp, 'wall')) return toast('Your Nursery is full (' + S.nurseCap + '). Sell, pot or hang something first.', 'bad');
+  p.g = Math.max(.2, p.g - .035); p.gs = Math.floor(p.g / GSTEP); p.pcd = 2; p._shake = .5;
+  const c = plantCenter(p); fxBurst(c.x, c.y, 'sparkle', 14); AU.pop();
+  toast('Took a ' + PROP_TXT[propMethod(p.sp)].toLowerCase() + ' from ' + sp.n + '. Find it in the Nursery.', 'good');
+  if (T.sheetKind === 'plant') UI.plantCard(p);
+}
+function extraCardHtml(p) {
+  const sp = SP[p.sp]; let h = '';
+  if (sp.f === 'trail') {
+    const cur = Math.round((p.vl != null ? p.vl : 1) * 100);
+    h += `<div class="ail ok" style="background:#f4f8ee"><b>Vines</b> \u00b7 length <span id="vlTxt">${cur}%</span>${p.bush ? ' \u00b7 bushiness +' + p.bush : ''}
+      <input type="range" class="nslider" id="vlSl" min="15" max="${cur}" value="${cur}" aria-label="Vine length">
+      <div class="acts" style="margin:4px 0"><button class="btn sm" id="vlTrim">${ic('scissors')}Trim to this length</button></div>
+      <div style="font-weight:800;font-size:13px;margin-top:4px">Arrange vines</div>
+      <div class="seg" id="vaSeg">${VINE_OPTS.map(([k, n]) => `<button data-va="${k}" class="${(p.va || 'down') === k ? 'on' : ''}">${n}</button>`).join('')}</div></div>`;
+  }
+  const m = propMethod(p.sp), ok = p.g >= .2 && p.h >= 60 && !p.ail && !(p.pcd > 0);
+  h += `<div class="acts"><button class="btn alt" id="pcProp" ${ok ? '' : 'style="opacity:.6"'}>${ic('sprout')}Propagate (${m})</button></div>
+    <p style="font-size:12px;margin:0 0 6px;opacity:.75">${PROP_TXT[m]}. ${p.g < .2 ? 'Needs to reach Young first.' : p.pcd > 0 ? 'Recovering from the last cutting.' : 'Roots in the Nursery in a few days.'}</p>`;
+  return h;
+}
+function bindExtraCard(p) {
+  if ($('vlSl')) {
+    $('vlSl').oninput = () => { $('vlTxt').textContent = $('vlSl').value + '%'; };
+    $('vlTrim').onclick = () => { AU.init(); trimTo(p, $('vlSl').value / 100); };
+    $('vaSeg').querySelectorAll('[data-va]').forEach(b => b.onclick = () => { p.va = b.dataset.va; T.dirty = true; AU.rustle(); p._shake = .3; $('vaSeg').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); save(); });
+  }
+  $('pcProp').onclick = () => { AU.init(); propagate(p); };
+}
+
+/* ---------- nursery simulation ---------- */
+function nurseLight() { return 22 + .7 * S.nLight * (.35 + .65 * daylight()); }
+const ROOT_DAYS = { water: 2.6, soil: 3.2, leaf: 4, division: 1.6 };
+function simNursery(dt) {
+  if (!S.nursery.length) return;
+  const L = nurseLight();
+  S.nursery.slice().forEach(n => {
+    const sp = SP[n.sp], lm = lightMatch(sp, L); n.age = (n.age || 0) + dt;
+    const jar = n.kind === 'prop' && n.method === 'water';
+    n.w = Math.max(0, n.w - (jar ? 14 : waterRate(sp) * (n.kind === 'prop' ? .6 : .85)) * dt);
+    n.n = Math.max(0, n.n - 4 * dt);
+    const lo = jar ? 25 : sp.band[0] - 5, dry = n.w < lo ? (lo - n.w) / Math.max(1, lo) : 0;
+    let dh = -dry * 30 - (n.w > sp.soggy && !jar ? 4 : 0) - (n.n > 112 ? 8 : 0) - (lm.status !== 'good' ? 3 : 0);
+    if (n.ail) { n.ail.sev = Math.min(1, n.ail.sev + .12 * dt); dh -= AILS[n.ail.t].dmg * (.4 + .6 * n.ail.sev) * .8; }
+    if (dh > -.5) dh += 8;
+    n.h = clamp(n.h + dh * dt, 0, 100);
+    const f = (1 - Math.min(1, dry)) * (.35 + .65 * lm.m) * (.3 + .7 * n.h / 100) * (n.ail ? .5 : 1);
+    if (n.kind === 'prop' && n.root < 1) { n.root = Math.min(1, n.root + dt / ROOT_DAYS[n.method] * f); if (n.root >= 1) toast('Your ' + sp.n + ' ' + (n.method === 'water' ? 'cutting has roots' : 'is rooted') + '! Pot it up in the Nursery.', 'good'); }
+    if (n.kind === 'plant') { n.g = Math.min(1.1, n.g + .03 * sp.gr * f * (n.n > 15 ? 1 : .5) * dt); n.gv = n.g; }
+    if (n.imm > 0) n.imm -= dt;
+    if (!n.ail && !(n.imm > 0) && Math.random() < dt * .02 * (.4 + sp.ps) * (1 + 2 * (1 - n.h / 100))) {
+      const opts = PESTS.filter(t => !sp.pests || sp.pests.includes(t)).concat(['leaf_spot']); n.ail = { t: pick(opts.length ? opts : PESTS), sev: .2, seen: false, pts: [] };
+      toast('Something is bugging your ' + sp.n + ' in the Nursery.', 'warn');
+    }
+    if (n.h <= 0) { S.nursery = S.nursery.filter(q => q !== n); S.stats.died++; toast('Your ' + sp.n + (n.kind === 'prop' ? ' cutting' : '') + ' in the Nursery didn\u2019t make it.', 'bad'); if (T.nSel === n) UI.closeSheet(); }
+  });
+}
+function sellValue(n) { const sp = SP[n.sp]; return Math.max(2, Math.round(n.kind === 'plant' ? sp.pr * (.35 + .6 * Math.min(1, n.g)) : sp.pr * (n.root >= 1 ? .3 : .12))); }
+
+/* ---------- nursery card ---------- */
+function nurseCard(n) {
+  T.nSel = n; T.sel = null; const sp = SP[n.sp], L = nurseLight(), lm = lightMatch(sp, L), jar = n.kind === 'prop' && n.method === 'water';
+  const bar = (lbl, v, col, txt) => `<div class="meter"><div class="ml"><span>${lbl}</span><span>${txt}</span></div><div class="bar"><div class="fill" style="width:${clamp(v, 0, 100)}%;background:${col}"></div></div></div>`;
+  const free = freeSlots();
+  const treats = Object.keys(TREAT).filter(k => S.inv[k] > 0);
+  let html = `<div class="shead"><div><h2>${esc(sp.n)}</h2><div class="sci">${n.kind === 'prop' ? PROP_TXT[n.method] : 'Potted ' + STAGES[stageOf(n.g)].n.toLowerCase() + ' plant'} \u00b7 Nursery</div></div><button class="x" id="nuX">${ic('x')}</button></div>`;
+  html += bar(jar ? 'Water in jar' : 'Soil moisture', jar ? n.w : n.w / 1.5, '#4aa3e0', Math.round(n.w) + '%' + (n.w < (jar ? 25 : sp.band[0] - 5) ? ' \u00b7 Thirsty' : ''));
+  html += bar('Window light vs. needs', L, lm.status === 'good' ? '#e6c84a' : '#e08a4a', Math.round(L) + ' \u00b7 ' + (lm.status === 'good' ? 'Good' : lm.status === 'dark' ? 'Too dark' : 'Too bright'));
+  html += bar('Health', n.h, n.h > 60 ? '#4caf50' : '#e0a020', Math.round(n.h) + '%');
+  if (n.kind === 'prop') html += bar('Rooting', n.root * 100, '#c99a5a', n.root >= 1 ? 'Ready to pot!' : Math.round(n.root * 100) + '%');
+  else html += bar('Growth', n.g * 100, '#5aaa3f', STAGES[stageOf(n.g)].n);
+  if (n.ail) html += `<div class="ail"><b>${AILS[n.ail.t].n}</b><br>${AILS[n.ail.t].sym}</div>` + (treats.length ? `<div class="seg">${treats.map(k => `<button data-nt="${k}">${TREAT[k].n} (${S.inv[k]})</button>`).join('')}</div>` : '<p style="font-size:13px">No treatments in stock. Visit the Shop.</p>');
+  html += `<div class="acts"><button class="btn" id="nuW">${ic('water')}${jar ? 'Top up' : 'Water'}</button>${n.kind === 'plant' ? `<button class="btn" id="nuF">${ic('feed')}Feed</button>` : ''}
+    ${n.kind === 'prop' && n.root >= 1 ? `<button class="btn gold" id="nuPot">${ic('sprout')}Pot it up</button>` : ''}
+    <button class="btn alt" id="nuSell">${ic('coin')}Sell ${sellValue(n)}</button></div>`;
+  if (n.kind === 'plant') html += free.length ? `<div style="font-weight:800;font-size:13px">Move to wall spot:</div><div class="seg">${free.map(i => `<button data-ns="${i}">Spot ${i + 1} \u00b7 ${lightCat(slotLight(i))}</button>`).join('')}</div>` : '<p style="font-size:13px">No free wall spots. Unlock or free one to hang this plant.</p>';
+  else if (n.root < 1) html += `<p style="font-size:13px;opacity:.8">${n.method === 'water' ? 'Keep the jar topped up and watch the roots grow.' : 'Keep the soil lightly moist in bright, indirect light.'}</p>`;
+  UI.openSheet('nurse', html);
+  $('nuX').onclick = () => UI.closeSheet();
+  $('nuW').onclick = () => { AU.init(); nurseWater(n); nurseCard(n); };
+  if ($('nuF')) $('nuF').onclick = () => { AU.init(); nurseFeed(n); nurseCard(n); };
+  if ($('nuPot')) $('nuPot').onclick = () => { n.kind = 'plant'; n.g = .14; n.gv = .14; n.w = 60; n.n = 55; AU.grow(); toast(sp.n + ' is potted up! Hang it on the wall, keep growing it here, or sell it.', 'good'); S.stats.props = (S.stats.props || 0) + 1; addGT(3); T.nfx = { id: n.id, t: 1 }; nurseCard(n); };
+  $('nuSell').onclick = () => { const v = sellValue(n); S.nursery = S.nursery.filter(q => q !== n); S.coins += v; S.stats.earned += v; AU.coin(); UI.hud(); toast('Sold ' + sp.n + ' for ' + v + ' coins.', 'good'); UI.closeSheet(); };
+  $('sheetIn').querySelectorAll('[data-ns]').forEach(b => b.onclick = () => moveToWall(n, +b.dataset.ns));
+  $('sheetIn').querySelectorAll('[data-nt]').forEach(b => b.onclick = () => { const k = b.dataset.nt; S.inv[k]--; if (TREAT[k].cures.includes(n.ail.t)) { toast(AILS[n.ail.t].n + ' cleared up on your ' + sp.n + '!', 'good'); n.ail = null; n.imm = 2; AU.grow(); S.stats.cured++; T.nfx = { id: n.id, t: 1 }; } else { toast(TREAT[k].n + ' doesn\u2019t work on ' + AILS[n.ail.t].n.toLowerCase() + '. Wasted.', 'bad'); AU.bad(); } UI.hud(); nurseCard(n); });
+}
+function nurseWater(n) { const jar = n.kind === 'prop' && n.method === 'water'; n.w = jar ? 100 : Math.min(150, n.w + 50); AU.pour(.6); T.nfx = { id: n.id, t: 1, k: 'water' }; T.dirty = true; if (!jar && n.w > SP[n.sp].soggy) toast('That soil is soggy now. Let it dry a bit.', 'warn'); }
+function nurseFeed(n) { if (!(S.inv.fert > 0)) return toast('Out of fertilizer. Buy more in the Shop.', 'bad'); S.inv.fert--; n.n = Math.min(160, n.n + 35); AU.pop(); UI.hud(); if (n.n > 112) toast('Too much food! Fertilizer burn.', 'warn'); T.dirty = true; }
+function moveToWall(n, slot) {
+  if (plantAt(slot) || slot >= S.unlocked) return toast('That spot is taken.', 'bad');
+  S.nursery = S.nursery.filter(q => q !== n); UI.closeSheet(); setView('wall');
+  const p = placeFromData(n, slot); ['bush', 'vl', 'va'].forEach(k => { if (n[k] != null) p[k] = n[k]; }); p.gs = Math.floor(p.g / GSTEP); p.gv = p.g;
+  toast(SP[n.sp].n + ' is now hanging on your wall!', 'good');
+}
+function nurseSettings() {
+  const cost = 40 + (S.nurseCap - 6) * 30;
+  UI.openSheet('nlight', `<div class="shead"><div><h2>Nursery</h2><div class="sci">${S.nursery.length}/${S.nurseCap} spots used</div></div><button class="x" id="nsX">${ic('x')}</button></div>
+    <div class="ml" style="display:flex;justify-content:space-between;font-weight:800"><span>Nursery window blinds</span><span id="nlTxt">${S.nLight}% open \u00b7 light ${Math.round(nurseLight())}</span></div>
+    <input type="range" class="nslider" id="nlSl" min="0" max="100" value="${S.nLight}">
+    <p style="font-size:13px;opacity:.8">Cuttings like bright, indirect light (about 45\u201370). Succulent leaves like it brighter.</p>
+    <div class="acts">${S.nurseCap < 12 ? `<button class="btn gold" id="nsUp" ${S.coins < cost ? 'disabled' : ''}>${ic('cart')}Add 2 shelf spots \u00b7 ${cost}</button>` : '<span>Nursery is fully expanded.</span>'}</div>`);
+  $('nsX').onclick = () => UI.closeSheet();
+  $('nlSl').oninput = () => { S.nLight = +$('nlSl').value; $('nlTxt').textContent = S.nLight + '% open \u00b7 light ' + Math.round(nurseLight()); T.dirty = true; };
+  if ($('nsUp')) $('nsUp').onclick = () => { if (S.coins < cost) return; S.coins -= cost; S.nurseCap += 2; AU.coin(); UI.hud(); toast('Nursery expanded to ' + S.nurseCap + ' spots.', 'good'); nurseSettings(); };
+}
+function setView(v) {
+  S.view = v; UI.closeSheet(); T.drag = null; T.placing = null;
+  const b = $('viewBtn'); if (b) { b.innerHTML = ic(v === 'wall' ? 'sprout' : 'wall') + '<span>' + (v === 'wall' ? 'Nursery' : 'Wall') + '</span>'; }
+  document.body.classList.toggle('nurse', v === 'nursery'); T.viewSnap = true; AU.click();
+}
+
+/* ---------- nursery rendering ---------- */
+function nurseLayout() {
+  const hud = $('hud').getBoundingClientRect(), tb = $('toolbar').getBoundingClientRect();
+  const top = hud.bottom + 8, bot = tb.top - 8, cols = CW < 520 ? 3 : CW < 900 ? 4 : 6;
+  const winH = Math.min(170, (bot - top) * .26), rows = Math.ceil(S.nurseCap / cols);
+  const areaT = top + winH + 16, cellH = Math.min(190, (bot - areaT) / rows), cellW = Math.min(170, (CW - 24) / cols);
+  const x0 = (CW - cellW * cols) / 2, cells = [];
+  for (let i = 0; i < S.nurseCap; i++) { const r = Math.floor(i / cols), c = i % cols; cells.push({ x: x0 + c * cellW + cellW / 2, y: areaT + (r + 1) * cellH - 14, w: cellW, h: cellH }); }
+  return { top, bot, winH, cells, cellW, cellH, cols, rows, x0, areaT };
+}
+function renderNursery(dt) {
+  const c = ctx, Lo = nurseLayout(); NIGHT = 1 - daylight(); const day = daylight();
+  c.setTransform(DPR, 0, 0, DPR, 0, 0); c.clearRect(0, 0, CW, CH);
+  const bg = c.createLinearGradient(0, 0, 0, CH); bg.addColorStop(0, '#f3ece0'); bg.addColorStop(1, '#e6dccb'); c.fillStyle = bg; c.fillRect(0, 0, CW, CH);
+  // window
+  const ww = Math.min(CW * .7, 520), wx = (CW - ww) / 2, wy = Lo.top + 4, wh = Lo.winH;
+  c.fillStyle = '#fff'; c.fillRect(wx - 8, wy - 8, ww + 16, wh + 16);
+  const sky = c.createLinearGradient(0, wy, 0, wy + wh); sky.addColorStop(0, mix('#1d2a55', '#8fc8f0', day)); sky.addColorStop(1, mix('#2a3460', '#dff1fb', day)); c.fillStyle = sky; c.fillRect(wx, wy, ww, wh);
+  c.fillStyle = mix('#1e3a26', '#7fb069', day); c.beginPath(); c.ellipse(wx + ww * .25, wy + wh, ww * .3, wh * .35, 0, Math.PI, 0); c.ellipse(wx + ww * .75, wy + wh, ww * .25, wh * .28, 0, Math.PI, 0); c.fill();
+  if (day > .2) { c.fillStyle = 'rgba(255,240,180,' + day + ')'; c.beginPath(); c.arc(wx + ww * .8, wy + wh * .3, 14, 0, TAU); c.fill(); }
+  const slats = Math.round((1 - S.nLight / 100) * 14); c.fillStyle = 'rgba(245,240,230,.95)';
+  for (let i = 0; i < slats; i++) c.fillRect(wx, wy + i * (wh / 14), ww, wh / 14 - 2);
+  c.strokeStyle = '#fff'; c.lineWidth = 6; c.beginPath(); c.moveTo(wx + ww / 2, wy); c.lineTo(wx + ww / 2, wy + wh); c.stroke();
+  // light rays
+  if (day > .1 && S.nLight > 5) { c.save(); c.globalAlpha = .12 * day * S.nLight / 100; c.fillStyle = '#fff6c8'; c.beginPath(); c.moveTo(wx, wy + wh); c.lineTo(wx + ww, wy + wh); c.lineTo(wx + ww * 1.3, Lo.bot); c.lineTo(wx - ww * .3, Lo.bot); c.fill(); c.restore(); }
+  // sign
+  c.fillStyle = '#6b4a2b'; c.font = '800 14px system-ui, sans-serif'; c.textAlign = 'center'; c.fillText('Nursery \u00b7 ' + S.nursery.length + '/' + S.nurseCap, CW / 2, Lo.areaT - 2);
+  // shelves
+  for (let r = 0; r < Lo.rows; r++) {
+    const y = Lo.areaT + (r + 1) * Lo.cellH - 14;
+    c.fillStyle = '#a8794c'; c.fillRect(Lo.x0 - 8, y, Lo.cellW * Lo.cols + 16, 12); c.fillStyle = '#7c5530'; c.fillRect(Lo.x0 - 8, y + 12, Lo.cellW * Lo.cols + 16, 5);
+    c.fillStyle = 'rgba(0,0,0,.08)'; c.fillRect(Lo.x0 - 8, y + 17, Lo.cellW * Lo.cols + 16, 8);
+  }
+  T.nRects = [];
+  Lo.cells.forEach((cell, i) => {
+    const n = S.nursery[i]; const s = Math.min(cell.w / 120, cell.h / 150);
+    if (!n) { c.strokeStyle = 'rgba(120,90,60,.35)'; c.setLineDash([5, 5]); c.lineWidth = 2; c.beginPath(); c.arc(cell.x, cell.y - 26 * s, 20 * s, 0, TAU); c.stroke(); c.setLineDash([]); return; }
+    T.nRects.push({ n, x0: cell.x - cell.w / 2, x1: cell.x + cell.w / 2, y0: cell.y - cell.h + 14, y1: cell.y + 14 });
+    const sp = SP[n.sp], wilt = n.h < 50 ? (50 - n.h) / 50 : 0, sw = Math.sin(T.t * 1.3 + n.seed) * .04;
+    const fx = T.nfx && T.nfx.id === n.id ? T.nfx.t : 0;
+    if (n.kind === 'prop' && n.method === 'water') drawJar(c, cell.x, cell.y, s, n, sp, wilt, sw);
+    else if (n.kind === 'prop') drawPropPot(c, cell.x, cell.y, s, n, sp, wilt, sw);
+    else {
+      const k = s * .42, sv = VM, sc = CUR; n._wilt = wilt * .8;
+      VM = { a: DPR * k, e: DPR * cell.x, f: DPR * (cell.y - 44 * k) };
+      try { drawPot(c, 0, 0, n); drawPlant(c, n, 0, 0, {}); } catch (e) { }
+      VM = sv; CUR = sc; c.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+    if (fx) { c.globalAlpha = fx; c.fillStyle = '#fff7b0'; for (let k = 0; k < 8; k++) { const a = k / 8 * TAU + T.t * 2; c.beginPath(); c.arc(cell.x + Math.cos(a) * 40 * s * (1.5 - fx), cell.y - 50 * s + Math.sin(a) * 40 * s * (1.5 - fx), 3, 0, TAU); c.fill(); } c.globalAlpha = 1; }
+    // pests dots
+    if (n.ail && PESTS.includes(n.ail.t)) { c.fillStyle = n.ail.t === 'mealybugs' ? '#fff' : n.ail.t === 'aphids' ? '#8ccf3a' : n.ail.t === 'spider_mites' ? '#c0392b' : '#3a2a1a'; for (let k = 0; k < 4 + n.ail.sev * 8; k++) { c.beginPath(); c.arc(cell.x + (hash(n.seed, k) - .5) * 40 * s + Math.sin(T.t * 3 + k) * 1.5, cell.y - 40 * s - hash(n.seed, k + 9) * 50 * s, 2.4, 0, TAU); c.fill(); } }
+    // label
+    c.fillStyle = 'rgba(40,30,20,.85)'; c.font = '700 ' + Math.max(10, Math.round(11 * Math.min(1.2, s + .2))) + 'px system-ui, sans-serif'; c.textAlign = 'center';
+    c.fillText(sp.n.length > 16 ? sp.n.slice(0, 15) + '\u2026' : sp.n, cell.x, cell.y + 30);
+    const st = n.kind === 'prop' ? (n.root >= 1 ? 'Ready to pot!' : 'Rooting ' + Math.round(n.root * 100) + '%') : STAGES[stageOf(n.g)].n;
+    c.fillStyle = n.kind === 'prop' && n.root >= 1 ? '#2f7a2a' : 'rgba(60,50,40,.7)'; c.fillText(st, cell.x, cell.y + 44);
+    // badges
+    const thirsty = n.w < ((n.kind === 'prop' && n.method === 'water') ? 25 : sp.band[0] - 5);
+    let bx = cell.x + cell.w * .3, by = cell.y - cell.h + 34;
+    if (n.ail) { c.fillStyle = '#e04a3a'; c.beginPath(); c.arc(bx, by, 10, 0, TAU); c.fill(); c.fillStyle = '#fff'; c.font = '900 13px system-ui'; c.fillText('!', bx, by + 5); bx -= 24; }
+    if (thirsty) { c.fillStyle = '#3a8fd6'; c.beginPath(); c.moveTo(bx, by - 11); c.quadraticCurveTo(bx + 9, by + 1, bx, by + 9); c.quadraticCurveTo(bx - 9, by + 1, bx, by - 11); c.fill(); }
+    if (n.kind === 'prop' && n.root >= 1) { c.strokeStyle = 'rgba(120,220,90,' + (.5 + .4 * Math.sin(T.t * 4)) + ')'; c.lineWidth = 3; c.beginPath(); c.arc(cell.x, cell.y - 40 * s, 46 * s, 0, TAU); c.stroke(); }
+  });
+  if (T.nfx) { T.nfx.t -= dt * .8; if (T.nfx.t <= 0) T.nfx = null; }
+  if (NIGHT > .01) { c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = `rgba(12,18,48,${.42 * NIGHT})`; c.fillRect(0, 0, cv.width, cv.height); }
+}
+function smallLeaf(c, x, y, ang, len, col, wilt) { c.save(); c.translate(x, y); c.rotate(ang + wilt * Math.sign(ang || 1) * .6); c.fillStyle = col; c.beginPath(); c.moveTo(0, 0); c.bezierCurveTo(len * .55, -len * .35, len * .5, -len * .95, 0, -len); c.bezierCurveTo(-len * .5, -len * .95, -len * .55, -len * .35, 0, 0); c.fill(); c.strokeStyle = 'rgba(0,0,0,.18)'; c.lineWidth = 1; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, -len * .85); c.stroke(); c.restore(); }
+function drawJar(c, x, y, s, n, sp, wilt, sw) {
+  const w = 40 * s, h = 62 * s, top = y - h;
+  // water + glass
+  const lvl = clamp(n.w / 100, 0, 1); c.fillStyle = 'rgba(150,205,235,.45)'; c.fillRect(x - w / 2 + 2, y - h * lvl * .9, w - 4, h * lvl * .9 - 2);
+  // roots
+  const rl = n.root * 46 * s, sx = x, sy = top + 18 * s;
+  c.strokeStyle = '#e9d7a6'; c.lineCap = 'round';
+  for (let k = 0; k < 5; k++) { if (n.root < k * .12) continue; const a = (k - 2) * .35, L = rl * (.6 + .4 * hash(n.seed, k)); c.lineWidth = 2.2 * s + .8; c.beginPath(); c.moveTo(sx, sy + 10 * s); c.quadraticCurveTo(sx + Math.sin(a) * L * .5 + Math.sin(T.t + k) * 1.5, sy + 10 * s + L * .5, sx + Math.sin(a) * L * .8, Math.min(y - 5, sy + 10 * s + L)); c.stroke(); if (L > 18 * s) { c.lineWidth = 1.4; c.beginPath(); c.moveTo(sx + Math.sin(a) * L * .4, sy + 10 * s + L * .45); c.lineTo(sx + Math.sin(a) * L * .4 + 6 * s * Math.sign(a || 1), sy + 10 * s + L * .6); c.stroke(); } }
+  // stem + leaves
+  c.strokeStyle = shade(sp.c, -.3); c.lineWidth = 2.4 * s; c.beginPath(); c.moveTo(sx, sy + 12 * s); c.quadraticCurveTo(sx - 4 * s, top - 6 * s, sx + 2 * s, top - 26 * s); c.stroke();
+  const L = (sp.lf === 'pearl' ? 10 : 24) * s * (sp.L > 30 ? 1.1 : .9);
+  smallLeaf(c, sx + 2 * s, top - 14 * s, -.9 + sw, L, sp.c, wilt); smallLeaf(c, sx + 2 * s, top - 22 * s, .8 + sw, L * .9, shade(sp.c, .12), wilt); smallLeaf(c, sx + 2 * s, top - 26 * s, .1 + sw, L * .75, shade(sp.c, .2), wilt);
+  c.strokeStyle = 'rgba(255,255,255,.95)'; c.lineWidth = 2.5; c.beginPath(); c.roundRect(x - w / 2, top, w, h, [4, 4, 9 * s, 9 * s]); c.stroke();
+  c.strokeStyle = 'rgba(120,160,180,.55)'; c.lineWidth = 1; c.stroke();
+  c.fillStyle = 'rgba(255,255,255,.35)'; c.fillRect(x - w / 2 + 4, top + 6, 4 * s, h - 14);
+}
+function drawPropPot(c, x, y, s, n, sp, wilt, sw) {
+  const w = 44 * s, h = 34 * s, top = y - h;
+  const sx = x, sy = top + 4 * s;
+  if (n.method === 'leaf') { smallLeaf(c, sx - 4 * s, sy, -.35 + sw, 26 * s, sp.c, wilt); if (n.root > .5) { smallLeaf(c, sx + 6 * s, sy, .5, 9 * s * (n.root - .4) * 2, shade(sp.c, .2), 0); } }
+  else if (n.method === 'division') { for (let k = 0; k < 5; k++) smallLeaf(c, sx + (k - 2) * 3 * s, sy, (k - 2) * .45 + sw, (18 + 6 * n.root) * s * (k === 2 ? 1.2 : 1), k % 2 ? sp.c : shade(sp.c, .12), wilt); }
+  else { c.strokeStyle = shade(sp.c, -.3); c.lineWidth = 2.4 * s; c.beginPath(); c.moveTo(sx, sy + 4); c.lineTo(sx + 1, sy - 24 * s); c.stroke(); smallLeaf(c, sx + 1, sy - 14 * s, -.9 + sw, 20 * s, sp.c, wilt); smallLeaf(c, sx + 1, sy - 22 * s, .7 + sw, 18 * s, shade(sp.c, .1), wilt); }
+  c.fillStyle = '#c0683e'; c.beginPath(); c.moveTo(x - w / 2, top); c.lineTo(x + w / 2, top); c.lineTo(x + w * .38, y); c.lineTo(x - w * .38, y); c.closePath(); c.fill();
+  c.fillStyle = '#a8552f'; c.fillRect(x - w / 2 - 2, top, w + 4, 8 * s);
+  c.fillStyle = n.w > 50 ? '#3b2a1e' : '#6b5038'; c.fillRect(x - w / 2 + 3, top + 1, w - 6, 3 * s);
+}
+/* ---------- nursery input + hooks ---------- */
+window.addEventListener('pointerdown', e => {
+  if (!S || e.target !== cv) return;
+  if (S.view !== 'nursery') { try { T.lastPt = toWorld(e.clientX, e.clientY); } catch (_) { } return; }
+  e.stopPropagation(); e.preventDefault();
+  const r = (T.nRects || []).find(q => e.clientX >= q.x0 && e.clientX <= q.x1 && e.clientY >= q.y0 && e.clientY <= q.y1);
+  if (!r) return;
+  const n = r.n, tool = T.tool; AU.init();
+  if (tool === 'water') { nurseWater(n); return; }
+  if (tool === 'feed') { nurseFeed(n); return; }
+  if (tool === 'trim') { toast('Trim vines on the wall. Here you can water, treat, pot and sell.', ''); return; }
+  nurseCard(n);
+}, true);
+['pointermove', 'pointerup', 'pointercancel'].forEach(t => window.addEventListener(t, e => { if (S && S.view === 'nursery' && e.target === cv) e.stopPropagation(); }, true));
+window.addEventListener('click', e => {
+  if (!S || S.view !== 'nursery') return;
+  const b = e.target.closest && e.target.closest('#tb-light'); if (b) { e.stopPropagation(); e.preventDefault(); nurseSettings(); }
+}, true);
+document.addEventListener('DOMContentLoaded', () => { });
+setTimeout(() => { const b = $('viewBtn'); if (b) b.onclick = () => { if (!S) return; AU.init(); setView(S.view === 'wall' ? 'nursery' : 'wall'); }; }, 0);
+setInterval(() => { if (S && T.sheetKind === 'nurse' && T.nSel && S.nursery.includes(T.nSel) && !document.activeElement.closest?.('#sheet input')) { const st = $('sheetIn').scrollTop; nurseCard(T.nSel); $('sheetIn').scrollTop = st; } }, 1500);
 /* ================= MAIN ================= */
 function hydrate() {
   const d = newStateDefaults();
@@ -2318,7 +2626,10 @@ function hydrate() {
   S.stats = Object.assign({}, d.stats, S.stats);
   S.plants = S.plants.filter(p => SP[p.sp] && p.slot < 10);
   S.plants.forEach(p => { if (p.ail) { if (!AILS[p.ail.t]) p.ail = null; else { p.ail.pts = []; syncPests(p); } } p.stage = p.stage == null ? stageOf(p.g) : p.stage; });
-  S.nursery = (S.nursery || []).filter(n => SP[n.sp]);
+  S.nursery = (S.nursery || []).filter(n => SP[n.sp]).map(n => Object.assign({ id: S.nextId++, kind: 'plant', g: .2, h: 100, w: 60, n: 60, root: 1, seed: Math.random() * 999, age: 0 }, n));
+  if (!S.nurseCap || S.nurseCap < 6) S.nurseCap = 6; if (S.nursery.length > S.nurseCap) S.nurseCap = Math.min(12, S.nursery.length);
+  S.plants.forEach(p => { if (p.gs == null) p.gs = Math.floor(p.g / GSTEP); p.gv = p.gs * GSTEP; });
+  S.catName = CAT_NAME; S.view = 'wall';
 }
 function newStateDefaults() { const keep = S; const d = newState('x', []); S = keep; return d; }
 let started = false;
@@ -2340,7 +2651,7 @@ function frame(now) {
       if (running) { let gd = dt * S.speed / 60; while (gd > 1e-9) { const st = Math.min(gd, .01); simStep(st); gd -= st; } updateCat(dt); updateBugs(dt); }
       tickVisuals(dt, running);
       updateParts(dt);
-      render(dt);
+      if (S.view === 'nursery') renderNursery(dt); else render(dt);
       UI.clock(); UI.banner();
       cardT += dt; if (cardT > .4) { cardT = 0; UI.refreshCard(); if (T.sheetKind === 'light' && UI._ltUpd && Math.random() < .2) { /* keep list fresh */ } }
       saveT += dt; if ((T.dirty && saveT > 3) || saveT > 10) { saveT = 0; save(); }
@@ -2355,6 +2666,8 @@ function tickVisuals(dt, running) {
     const sp = SP[p.sp];
     const target = clamp((p._dry || 0) * 1.1 + (p.ail && p.ail.t === 'root_rot' ? .5 * p.ail.sev : 0) + (p.h < 30 ? (30 - p.h) / 45 : 0) + (p.w > sp.soggy ? .15 : 0), 0, 1.2);
     p._wilt = p._wilt == null ? target : lerp(p._wilt, target, 1 - Math.exp(-dt * 2));
+    { const tg = Math.max(GSTEP * .5, Math.min(p.g, (p.gs != null ? p.gs : Math.floor(p.g / GSTEP)) * GSTEP + GSTEP * .35)); p.gv = p.gv == null ? tg : p.gv + (tg - p.gv) * (1 - Math.exp(-dt * 1.6)); }
+    if (p._grew > 0) p._grew = Math.max(0, p._grew - dt * .7);
     if (p._bounce > 0) p._bounce = Math.max(0, p._bounce - dt * 1.4);
     if (p._shake > 0) p._shake = Math.max(0, p._shake - dt * 2.5);
     if (p._ox) { p._ox *= k; if (Math.abs(p._ox) < .3) p._ox = 0; }
